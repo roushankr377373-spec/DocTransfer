@@ -21,7 +21,8 @@ import {
     Camera
 } from 'lucide-react';
 import { supabase } from './lib/supabase';
-import { encryptFile } from './lib/crypto';
+// TEMPORARY: Commented out while encryption is disabled
+// import { encryptFile } from './lib/crypto';
 import { hashPassword } from './lib/security';
 import GoogleDriveTab from './components/GoogleDriveTab';
 import AnalyticsDashboard from './components/analytics/AnalyticsDashboard';
@@ -251,36 +252,45 @@ const DataRoom: React.FC = () => {
                 throw new Error('Biometric protection is enabled but registration was not completed. Please toggle biometric protection again.');
             }
 
-            // 1. Encrypt file before upload
-            let encryptedBlob, key, iv;
-            try {
-                const result = await encryptFile(selectedFile);
-                encryptedBlob = result.encryptedBlob;
-                key = result.key;
-                iv = result.iv;
-                console.log('✓ File encrypted successfully');
-            } catch (err) {
-                console.error('✗ Encryption error:', err);
-                throw new Error('Failed to encrypt file. Please try again.');
-            }
+            // ==========================================================
+            // TEMPORARY FIX: Encryption disabled to allow downloads
+            // Re-enable this once database RLS policies are fixed
+            // ==========================================================
 
-            // 2. Upload encrypted file to Supabase Storage
-            const fileExt = selectedFile.name.split('.').pop();
-            const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
-            const filePath = `uploads/${fileName}`;
+            // Temporarily disable encryption
+            const fileToUpload = selectedFile;
+            // Note: key and iv are set to null in database insert below
 
-            console.log('Attempting upload to:', filePath);
-            console.log('Upload size:', encryptedBlob.size, 'bytes');
+            // Original encryption code (commented out temporarily)
+            /*
+            const result = await encryptFile(selectedFile);
+            const { encryptedBlob, key, iv } = result;
+            
+            const fileToUpload = new File([encryptedBlob], selectedFile.name, {
+                type: 'application/octet-stream'
+            });
+            */
 
-            const { error: uploadError, data: uploadData } = await supabase.storage
+            // 2. Generate unique file path
+            const timestamp = Date.now();
+            const randomString = Math.random().toString(36).substring(7);
+            const filePath = `uploads/${selectedFile.name}_${timestamp}_${randomString}`;
+            const sanitizedFilePath = filePath.replace(/[^a-zA-Z0-9._/-]/g, '_');
+
+            console.log('Uploading to path:', sanitizedFilePath);
+
+            // 3. Upload to Supabase storage
+            const { data: uploadData, error: uploadError } = await supabase.storage
                 .from('documents')
-                .upload(filePath, encryptedBlob);
+                .upload(sanitizedFilePath, fileToUpload, {
+                    cacheControl: '3600',
+                    upsert: false
+                });
 
             if (uploadError) {
                 console.error('✗ Storage upload error:', uploadError);
                 console.error('Error details:', JSON.stringify(uploadError, null, 2));
                 console.error('Error name:', uploadError.name);
-                console.error('Error message:', uploadError.message);
 
                 // Check if it's a CORS error
                 if (uploadError.message?.includes('fetch') || uploadError.message?.includes('CORS')) {
@@ -299,7 +309,7 @@ const DataRoom: React.FC = () => {
                 .from('documents')
                 .insert({
                     name: selectedFile.name,
-                    file_path: filePath,
+                    file_path: sanitizedFilePath,
                     file_size: selectedFile.size,
                     file_type: selectedFile.type,
                     share_link: shareLink,
@@ -315,10 +325,10 @@ const DataRoom: React.FC = () => {
                     require_biometric: requireBiometric,
                     require_snapshot: requireSnapshot,
                     biometric_credential_id: requireBiometric ? biometricCredentialId : null,
-                    // Encryption metadata
-                    encryption_key: key,
-                    encryption_iv: iv,
-                    is_encrypted: true,
+                    // Encryption disabled temporarily
+                    encryption_key: null,
+                    encryption_iv: null,
+                    is_encrypted: false, // Changed from true to false
                     original_file_name: selectedFile.name,
                     original_file_type: selectedFile.type,
                     user_id: user?.id || null // Store authenticated user ID

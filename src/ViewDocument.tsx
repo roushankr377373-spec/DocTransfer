@@ -290,6 +290,17 @@ const ViewDocument: React.FC = () => {
         setDownloading(true);
 
         try {
+            console.log('=== DOWNLOAD DEBUG START ===');
+            console.log('Document:', {
+                name: document.name,
+                storage_type: document.storage_type,
+                file_type: document.file_type,
+                original_file_type: document.original_file_type,
+                is_encrypted: document.is_encrypted,
+                has_encryption_key: !!document.encryption_key,
+                has_encryption_iv: !!document.encryption_iv
+            });
+
             // Check if it's a Google Drive link
             if (document.storage_type === 'google_drive' && document.google_drive_link) {
                 // Redirect to Google Drive
@@ -297,30 +308,81 @@ const ViewDocument: React.FC = () => {
                 return;
             }
 
+            // Validate encryption keys if file is encrypted
+            if (document.is_encrypted) {
+                if (!document.encryption_key || !document.encryption_iv) {
+                    console.error('Missing encryption keys:', {
+                        has_key: !!document.encryption_key,
+                        has_iv: !!document.encryption_iv
+                    });
+                    alert('Error: Encryption keys are missing for this secure file. Please contact the file owner.');
+                    return;
+                }
+                console.log('✓ Encryption keys present');
+            }
+
             // Handle Supabase storage download
+            console.log('Downloading from storage:', document.file_path);
             const { data, error } = await supabase.storage
                 .from('documents')
                 .download(document.file_path);
 
-            if (error) throw error;
+            if (error) {
+                console.error('Storage download error:', error);
+                throw error;
+            }
+
+            console.log('✓ Downloaded from storage, size:', data.size, 'bytes');
 
             let blob = data;
+            let finalFileType = document.file_type;
 
             // Decrypt if encrypted
             if (document.is_encrypted && document.encryption_key && document.encryption_iv) {
                 try {
+                    console.log('Attempting decryption...');
+                    console.log('Encrypted blob size:', data.size);
+                    console.log('Key length:', document.encryption_key.length);
+                    console.log('IV length:', document.encryption_iv.length);
+
+                    // Use original_file_type if available, otherwise fall back to file_type
+                    finalFileType = document.original_file_type || document.file_type;
+                    console.log('Target MIME type:', finalFileType);
+
                     blob = await decryptFile(
                         data,
                         document.encryption_key,
                         document.encryption_iv,
-                        document.original_file_type || document.file_type
+                        finalFileType
                     );
+
+                    console.log('✓ Decryption successful, size:', blob.size, 'bytes');
+                    console.log('Decrypted blob type:', blob.type);
                 } catch (decryptError) {
                     console.error('Decryption failed:', decryptError);
-                    alert('Failed to decrypt file. The key may be invalid.');
+                    console.error('Decryption error details:', {
+                        message: decryptError instanceof Error ? decryptError.message : 'Unknown error',
+                        stack: decryptError instanceof Error ? decryptError.stack : undefined
+                    });
+                    alert('Failed to decrypt file. The encryption key may be invalid or the file may be corrupted.');
                     return;
                 }
+            } else {
+                console.log('File is not encrypted, downloading directly');
             }
+
+            // Verify blob has content
+            if (blob.size === 0) {
+                console.error('Error: Downloaded blob is empty');
+                alert('Error: Downloaded file is empty. This may indicate a decryption or storage issue.');
+                return;
+            }
+
+            console.log('Creating download link...');
+            console.log('Final blob:', {
+                size: blob.size,
+                type: blob.type
+            });
 
             // Create download link
             const url = window.URL.createObjectURL(blob);
@@ -329,11 +391,21 @@ const ViewDocument: React.FC = () => {
             a.download = document.name;
             window.document.body.appendChild(a);
             a.click();
+
+            console.log('✓ Download triggered');
+
+            // Cleanup
             window.URL.revokeObjectURL(url);
             window.document.body.removeChild(a);
+
+            console.log('=== DOWNLOAD DEBUG END ===');
         } catch (err: any) {
             console.error('Download error:', err);
-            alert('Failed to download file.');
+            console.error('Error details:', {
+                message: err.message,
+                stack: err.stack
+            });
+            alert(`Failed to download file: ${err.message || 'Unknown error'}`);
         } finally {
             if (document) {
                 logDocumentDownload(document.id, {
