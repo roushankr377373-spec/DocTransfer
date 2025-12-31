@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { Upload, Globe, Layout, Palette, Save, Loader2, CheckCircle, AlertCircle, FileText, Download, Shield, Lock, ExternalLink, Smartphone, Monitor, Zap } from 'lucide-react';
+import { useSubscription } from '../hooks/useSubscription';
+import { Upload, Globe, Layout, Palette, Save, Loader2, CheckCircle, AlertCircle, FileText, Download, Shield, Lock, ExternalLink, Smartphone, Monitor, Zap, Eraser, Crown } from 'lucide-react';
 
 interface BrandingSettingsProps {
     userId: string;
@@ -11,6 +13,7 @@ interface BrandingConfig {
     site_url: string;
     logo_url: string;
     brand_color: string;
+    remove_branding: boolean;
     theme_mode: 'light' | 'dark' | 'auto';
 }
 
@@ -25,19 +28,28 @@ const PRESET_THEMES = [
 ];
 
 const BrandingSettings: React.FC<BrandingSettingsProps> = ({ userId }) => {
+    const navigate = useNavigate();
+    const { isFeatureLocked } = useSubscription();
     const [config, setConfig] = useState<BrandingConfig>({
         subdomain: '',
         site_url: '',
         logo_url: '',
         brand_color: '#4f46e5',
+        remove_branding: false,
         theme_mode: 'light'
     });
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+
+    const handleLockedFeatureClick = (feature: string) => {
+        navigate('/pricing');
+    };
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
     const [logoFile, setLogoFile] = useState<File | null>(null);
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
     const [previewDevice, setPreviewDevice] = useState<'mobile' | 'desktop'>('desktop');
+
+    const isWhiteLabelLocked = isFeatureLocked('white_label');
 
     useEffect(() => {
         if (userId) {
@@ -61,6 +73,7 @@ const BrandingSettings: React.FC<BrandingSettingsProps> = ({ userId }) => {
                     site_url: data.site_url || '',
                     logo_url: data.logo_url || '',
                     brand_color: data.brand_color || '#4f46e5',
+                    remove_branding: data.remove_branding || false,
                     theme_mode: 'light' // Default since column might not exist
                 });
                 if (data.logo_url) setLogoPreview(data.logo_url);
@@ -116,6 +129,7 @@ const BrandingSettings: React.FC<BrandingSettingsProps> = ({ userId }) => {
                     site_url: config.site_url,
                     logo_url: finalLogoUrl,
                     brand_color: config.brand_color,
+                    remove_branding: config.remove_branding,
                     updated_at: new Date().toISOString()
                 });
 
@@ -274,6 +288,53 @@ const BrandingSettings: React.FC<BrandingSettingsProps> = ({ userId }) => {
                                 </div>
                             </div>
 
+                            {/* White-Label Section */}
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <label className="flex items-center gap-2 text-sm font-bold text-gray-900 uppercase tracking-wider">
+                                        <Crown size={16} className={isWhiteLabelLocked ? "text-gray-400" : "text-indigo-500"} />
+                                        White-labeling
+                                    </label>
+                                    {isWhiteLabelLocked && (
+                                        <span onClick={() => handleLockedFeatureClick('White-label')} className="cursor-pointer flex items-center gap-1 px-2 py-1 bg-gray-100 text-xs font-semibold text-gray-500 rounded-lg hover:bg-gray-200 transition-colors">
+                                            <Lock size={10} /> Business Plan
+                                        </span>
+                                    )}
+                                </div>
+
+                                <div className={`p-6 rounded-2xl border transition-all ${config.remove_branding ? 'bg-indigo-50 border-indigo-200' : 'bg-gray-50 border-gray-200'}`}>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-start gap-4">
+                                            <div className={`p-3 rounded-xl ${config.remove_branding ? 'bg-indigo-100 text-indigo-600' : 'bg-white text-gray-400'}`}>
+                                                <Eraser size={24} />
+                                            </div>
+                                            <div>
+                                                <h4 className="font-semibold text-gray-900 mb-1">Remove DocTransfer Branding</h4>
+                                                <p className="text-sm text-gray-500">Hide "Powered by DocTransfer" from the viewer footer.</p>
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                if (isWhiteLabelLocked) {
+                                                    handleLockedFeatureClick('White-label');
+                                                    return;
+                                                }
+                                                setConfig({ ...config, remove_branding: !config.remove_branding });
+                                            }}
+                                            className={`relative inline-flex h-8 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2 ${config.remove_branding ? 'bg-indigo-600' : 'bg-gray-200'}`}
+                                        >
+                                            <span className="sr-only">Use setting</span>
+                                            <span
+                                                aria-hidden="true"
+                                                className={`pointer-events-none inline-block h-7 w-7 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${config.remove_branding ? 'translate-x-6' : 'translate-x-0'}`}
+                                            />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
                             {/* Links Section */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-4">
@@ -377,7 +438,7 @@ const BrandingSettings: React.FC<BrandingSettingsProps> = ({ userId }) => {
                                         </div>
                                         <div className="flex items-center gap-1.5 bg-gray-100 px-4 py-1.5 rounded-full text-[10px] font-medium text-gray-500">
                                             <Lock size={10} className="text-gray-400" />
-                                            secure.doctransfer.com
+                                            {config.subdomain ? `${config.subdomain}.doctransfer.com` : 'secure.doctransfer.com'}
                                         </div>
                                         <div className="w-8" />
                                     </div>
@@ -447,6 +508,12 @@ const BrandingSettings: React.FC<BrandingSettingsProps> = ({ userId }) => {
                                             <div className="mt-10 flex items-center gap-1.5 text-xs font-medium text-gray-400 hover:text-indigo-600 transition-colors cursor-pointer group">
                                                 <span>Visit {config.site_url.replace(/^https?:\/\//, '')}</span>
                                                 <ExternalLink size={12} className="group-hover:translate-x-0.5 transition-transform" />
+                                            </div>
+                                        )}
+
+                                        {!config.remove_branding && (
+                                            <div className="mt-4 text-center text-xs text-gray-300">
+                                                Powered by DocTransfer
                                             </div>
                                         )}
                                     </div>

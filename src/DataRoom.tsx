@@ -117,7 +117,7 @@ const DataRoom: React.FC = () => {
     const [signingLinks, setSigningLinks] = useState<any[]>([]);
 
     // Subscription and premium features
-    const { subscription, usage, isLoading: subLoading, isFeatureLocked, getRemainingUploads } = useSubscription();
+    const { subscription, usage, isLoading: subLoading, isFeatureLocked, getRemainingUploads, getMaxFileSize } = useSubscription();
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
     const [lockedFeatureName, setLockedFeatureName] = useState<string | undefined>();
 
@@ -252,6 +252,11 @@ const DataRoom: React.FC = () => {
 
     const handleUpload = async () => {
         if (selectedFiles.length === 0) return;
+
+        if (selectedFiles.length > 1 && isFeatureLocked('document_bundles')) {
+            handleLockedFeatureClick('Document Bundles');
+            return;
+        }
 
         setIsUploading(true);
         setUploadError(null);
@@ -550,14 +555,28 @@ const DataRoom: React.FC = () => {
                         <button onClick={() => setActiveTab('upload')} style={{ padding: '0.625rem 1.5rem', background: activeTab === 'upload' ? '#8b5cf6' : 'transparent', color: activeTab === 'upload' ? 'white' : '#6b7280', border: 'none', borderRadius: '8px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', transition: 'all 0.2s' }}>
                             <Upload size={16} /> Upload
                         </button>
-                        <button onClick={() => setActiveTab('google-drive')} style={{ padding: '0.625rem 1.5rem', background: activeTab === 'google-drive' ? '#8b5cf6' : 'transparent', color: activeTab === 'google-drive' ? 'white' : '#6b7280', border: 'none', borderRadius: '8px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', transition: 'all 0.2s' }}>
+                        <button onClick={() => {
+                            if (subscription?.plan_type === 'free' || !subscription) {
+                                handleLockedFeatureClick('Google Drive Integration');
+                            } else {
+                                setActiveTab('google-drive');
+                            }
+                        }} style={{ padding: '0.625rem 1.5rem', background: activeTab === 'google-drive' ? '#8b5cf6' : 'transparent', color: activeTab === 'google-drive' ? 'white' : '#6b7280', border: 'none', borderRadius: '8px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', transition: 'all 0.2s' }}>
                             <Globe size={16} /> Google Drive
+                            {(subscription?.plan_type === 'free' || !subscription) && <Lock size={14} />}
                         </button>
                         <button onClick={() => setActiveTab('documents')} style={{ padding: '0.625rem 1.5rem', background: activeTab === 'documents' ? '#8b5cf6' : 'transparent', color: activeTab === 'documents' ? 'white' : '#6b7280', border: 'none', borderRadius: '8px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', transition: 'all 0.2s' }}>
                             <FileText size={16} /> Documents
                         </button>
-                        <button onClick={() => setActiveTab('analytics')} style={{ padding: '0.625rem 1.5rem', background: activeTab === 'analytics' ? '#8b5cf6' : 'transparent', color: activeTab === 'analytics' ? 'white' : '#6b7280', border: 'none', borderRadius: '8px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', transition: 'all 0.2s' }}>
+                        <button onClick={() => {
+                            if (isFeatureLocked('advanced_analytics')) {
+                                handleLockedFeatureClick('Advanced Analytics');
+                            } else {
+                                setActiveTab('analytics');
+                            }
+                        }} style={{ padding: '0.625rem 1.5rem', background: activeTab === 'analytics' ? '#8b5cf6' : 'transparent', color: activeTab === 'analytics' ? 'white' : '#6b7280', border: 'none', borderRadius: '8px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', transition: 'all 0.2s' }}>
                             <BarChart2 size={16} /> Analytics
+                            {isFeatureLocked('advanced_analytics') && <Lock size={14} />}
                         </button>
                         <button onClick={() => setActiveTab('audit')} style={{ padding: '0.625rem 1.5rem', background: activeTab === 'audit' ? '#8b5cf6' : 'transparent', color: activeTab === 'audit' ? 'white' : '#6b7280', border: 'none', borderRadius: '8px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', transition: 'all 0.2s' }}>
                             <Shield size={16} /> Audit Trail
@@ -757,7 +776,12 @@ const DataRoom: React.FC = () => {
                                                         </div>
                                                     )}
                                                 </div>
-                                            ) : 'Supports multiple files (Bundles)'}
+                                            ) : (
+                                                <div style={{ display: 'flex', alignItems: 'center', justifySelf: 'center', gap: '0.25rem' }}>
+                                                    <span>Supports multiple files (Bundles)</span>
+                                                    {isFeatureLocked('document_bundles') && <Lock size={12} color="#9ca3af" />}
+                                                </div>
+                                            )}
                                         </div>
                                         {selectedFiles.length === 0 && (
                                             <p style={{ fontSize: '0.8rem', color: '#9ca3af', marginTop: '0.25rem' }}>Maximum file size: 30 MB per file</p>
@@ -961,12 +985,27 @@ const DataRoom: React.FC = () => {
                                                     <Shield size={18} style={{ color: '#ef4444' }} />
                                                 </div>
                                                 <div>
-                                                    <span style={{ fontSize: '0.95rem', fontWeight: '600', color: '#374151', display: 'block' }}>Screenshot Protection</span>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                        <span style={{ fontSize: '0.95rem', fontWeight: '600', color: '#374151' }}>Screenshot Protection</span>
+                                                        {isFeatureLocked?.('screenshot_protection') && <PremiumBadge size={14} />}
+                                                    </div>
                                                     <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>Block screen capture attempts</span>
                                                 </div>
                                             </div>
                                             <label className="toggle-switch">
-                                                <input type="checkbox" checked={screenshotProtection} onChange={(e) => setScreenshotProtection(e.target.checked)} />
+                                                <input
+                                                    type="checkbox"
+                                                    checked={screenshotProtection}
+                                                    onChange={(e) => {
+                                                        if (isFeatureLocked?.('screenshot_protection')) {
+                                                            e.preventDefault();
+                                                            handleLockedFeatureClick('Screenshot Protection');
+                                                        } else {
+                                                            setScreenshotProtection(e.target.checked);
+                                                        }
+                                                    }}
+                                                    disabled={isFeatureLocked?.('screenshot_protection')}
+                                                />
                                                 <span className="toggle-slider"></span>
                                             </label>
                                         </div>
@@ -980,12 +1019,27 @@ const DataRoom: React.FC = () => {
                                                     <Mail size={18} style={{ color: '#0ea5e9' }} />
                                                 </div>
                                                 <div>
-                                                    <span style={{ fontSize: '0.95rem', fontWeight: '600', color: '#374151', display: 'block' }}>Email Verification</span>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                        <span style={{ fontSize: '0.95rem', fontWeight: '600', color: '#374151' }}>Email Verification</span>
+                                                        {isFeatureLocked?.('email_verification') && <PremiumBadge size={14} />}
+                                                    </div>
                                                     <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>Require recipient email</span>
                                                 </div>
                                             </div>
                                             <label className="toggle-switch">
-                                                <input type="checkbox" checked={emailVerification} onChange={(e) => setEmailVerification(e.target.checked)} />
+                                                <input
+                                                    type="checkbox"
+                                                    checked={emailVerification}
+                                                    onChange={(e) => {
+                                                        if (isFeatureLocked?.('email_verification')) {
+                                                            e.preventDefault();
+                                                            handleLockedFeatureClick('Email Verification');
+                                                        } else {
+                                                            setEmailVerification(e.target.checked);
+                                                        }
+                                                    }}
+                                                    disabled={isFeatureLocked?.('email_verification')}
+                                                />
                                                 <span className="toggle-slider"></span>
                                             </label>
                                         </div>
@@ -1337,10 +1391,10 @@ const DataRoom: React.FC = () => {
 
                                             // Check file size for free users
                                             if (subscription?.plan_type === 'free' && selectedFiles.length > 0) {
-                                                const maxSize = 30 * 1024 * 1024; // 30MB
+                                                const maxSize = getMaxFileSize?.() || 10 * 1024 * 1024;
                                                 const oversizedFiles = selectedFiles.filter(f => f.size > maxSize);
                                                 if (oversizedFiles.length > 0) {
-                                                    setUploadError(`File size limit (30MB) exceeded: ${oversizedFiles[0].name} is ${(oversizedFiles[0].size / 1024 / 1024).toFixed(2)}MB. Upgrade to Standard for 500MB limit.`);
+                                                    setUploadError(`File size limit (${(maxSize / 1024 / 1024).toFixed(0)}MB) exceeded: ${oversizedFiles[0].name} is ${(oversizedFiles[0].size / 1024 / 1024).toFixed(2)}MB. Upgrade to Standard for 500MB limit.`);
                                                     return;
                                                 }
                                             }

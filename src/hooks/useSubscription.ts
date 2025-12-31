@@ -5,8 +5,8 @@ import { supabase } from '../lib/supabase';
 export interface Subscription {
     id: string;
     user_id: string;
-    stripe_customer_id: string | null;
-    stripe_subscription_id: string | null;
+    // stripe_customer_id: string | null;
+    // stripe_subscription_id: string | null;
     plan_type: 'free' | 'standard' | 'business';
     status: 'active' | 'canceled' | 'past_due' | 'trialing' | 'incomplete';
     current_period_start: string | null;
@@ -158,8 +158,8 @@ export const useSubscription = () => {
             return true;
         }
 
-        // Free plan: check if under 10 uploads this month
-        return (usage?.documents_uploaded || 0) < 10;
+        // Free plan: check if under 300 uploads this month (approx 10/day)
+        return (usage?.documents_uploaded || 0) < 300;
     };
 
     /**
@@ -170,7 +170,7 @@ export const useSubscription = () => {
 
         switch (subscription.plan_type) {
             case 'free':
-                return 30 * 1024 * 1024; // 30MB
+                return 10 * 1024 * 1024; // 10MB
             case 'standard':
                 return 500 * 1024 * 1024; // 500MB
             case 'business':
@@ -188,10 +188,12 @@ export const useSubscription = () => {
 
         const featureMap: Record<string, string[]> = {
             'custom_branding': ['standard', 'business'],
-            'link_expiration': ['standard', 'business'],
+            'link_expiration': ['free', 'standard', 'business'],
             'email_notifications': ['standard', 'business'],
+            'email_verification': ['standard', 'business'],
+            'screenshot_protection': ['standard', 'business'],
             'watermarking': ['standard', 'business'],
-            'burn_after_reading': ['standard', 'business'],
+            'burn_after_reading': ['free', 'standard', 'business'],
             'advanced_analytics': ['standard', 'business'],
             'audit_trails': ['standard', 'business'],
             'priority_support': ['standard', 'business'],
@@ -222,7 +224,7 @@ export const useSubscription = () => {
     const getRemainingUploads = (): number => {
         if (!subscription || subscription.plan_type !== 'free') return Infinity; // Unlimited for paid plans
         const currentUploads = usage?.documents_uploaded || 0;
-        return Math.max(0, 10 - currentUploads);
+        return Math.max(0, 300 - currentUploads);
     };
 
     /**
@@ -232,7 +234,7 @@ export const useSubscription = () => {
         if (!subscription) return 30;
         switch (subscription.plan_type) {
             case 'free':
-                return 30; // 30 days
+                return 1; // 1 day
             case 'standard':
                 return 365; // 1 year
             case 'business':

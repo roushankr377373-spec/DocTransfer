@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { useSubscription } from '../hooks/useSubscription';
+import { useSubscription } from '../../hooks/useSubscription';
 import { CreditCard, Calendar, TrendingUp, AlertCircle, ExternalLink } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../../lib/supabase';
 
 const SubscriptionManager: React.FC = () => {
     const { subscription, usage, isLoading } = useSubscription();

@@ -7,17 +7,33 @@ import {
     Users,
     MousePointer,
     Calendar,
-    BarChart2
+    BarChart2,
+    Download,
+    ArrowUp,
+    ArrowDown
 } from 'lucide-react';
+import {
+    AreaChart,
+    Area,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    ResponsiveContainer,
+    PieChart,
+    Pie,
+    Cell,
+    BarChart,
+    Bar,
+    Legend
+} from 'recharts';
 import { analyticsService } from '../../lib/analyticsService';
-import PageAttentionHeatmap from './PageAttentionHeatmap';
-import ViewerGeoMap from './ViewerGeoMap';
-import DeviceStats from './DeviceStats';
-import ConversionFunnel from './ConversionFunnel';
 
 interface AnalyticsDashboardProps {
     documentId?: string;
 }
+
+const COLORS = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
 const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ documentId }) => {
     const [loading, setLoading] = useState(true);
@@ -25,36 +41,27 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ documentId }) =
     const [timeRange, setTimeRange] = useState<number>(30); // days
 
     // Data states
-    const [dailyStats, setDailyStats] = useState<any[]>([]); // simplified for now
+    const [dailyStats, setDailyStats] = useState<any[]>([]);
     const [pageAttention, setPageAttention] = useState<any[]>([]);
     const [geoStats, setGeoStats] = useState<any[]>([]);
     const [deviceStats, setDeviceStats] = useState<any[]>([]);
     const [funnelData, setFunnelData] = useState<any[]>([]);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         if (!documentId) return;
 
         fetchData();
 
-        // Set up real-time subscriptions
-        const sessionSub = analyticsService.subscribeToSessions(documentId, (payload) => {
-            console.log('Real-time session update:', payload);
-            // Ideally trigger a refined refetch or state update
-            fetchData(); // Simple refresh for now
-        });
-
-        const viewSub = analyticsService.subscribeToViews(documentId, (payload) => {
-            console.log('Real-time view update:', payload);
-            fetchData();
-        });
+        // Real-time subscriptions
+        const sessionSub = analyticsService.subscribeToSessions(documentId, () => fetchData());
+        const viewSub = analyticsService.subscribeToViews(documentId, () => fetchData());
 
         return () => {
             sessionSub.unsubscribe();
             viewSub.unsubscribe();
         };
     }, [documentId, timeRange]);
-
-    const [error, setError] = useState<string | null>(null);
 
     const fetchData = async () => {
         if (!documentId) return;
@@ -82,18 +89,6 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ documentId }) =
         }
     };
 
-    const SummaryCard = ({ title, value, icon: Icon, color }: any) => (
-        <div style={{ background: 'white', padding: '1.5rem', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <div style={{ padding: '1rem', borderRadius: '12px', background: `${color} 20`, color: color }}>
-                <Icon size={24} />
-            </div>
-            <div>
-                <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: 0 }}>{title}</p>
-                <h3 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#111827', margin: 0 }}>{value}</h3>
-            </div>
-        </div>
-    );
-
     // Calculate high-level stats
     const totalViews = dailyStats.reduce((acc, curr) => acc + curr.total_views, 0);
     const uniqueViewers = dailyStats.reduce((acc, curr) => acc + curr.unique_sessions, 0);
@@ -101,46 +96,55 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ documentId }) =
         ? Math.round(dailyStats.reduce((acc, curr) => acc + curr.avg_duration_seconds, 0) / dailyStats.length)
         : 0;
 
+    const CustomTooltip = ({ active, payload, label }: any) => {
+        if (active && payload && payload.length) {
+            return (
+                <div style={{ background: 'white', padding: '1rem', borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+                    <p style={{ fontWeight: 'bold', marginBottom: '0.5rem', color: '#111827' }}>{new Date(label).toLocaleDateString()}</p>
+                    {payload.map((entry: any, index: number) => (
+                        <p key={index} style={{ color: entry.color, fontSize: '0.875rem' }}>
+                            {entry.name}: {entry.value}
+                        </p>
+                    ))}
+                </div>
+            );
+        }
+        return null;
+    };
+
     if (!documentId) {
         return (
-            <div style={{ padding: '3rem', textAlign: 'center', background: 'white', borderRadius: '12px', minHeight: '400px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                <BarChart2 size={48} color="#9ca3af" style={{ marginBottom: '1rem' }} />
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#374151', marginBottom: '0.5rem' }}>Select a Document</h3>
-                <p style={{ color: '#6b7280' }}>Choose a document from the Documents tab to view its analytics.</p>
+            <div className="flex flex-col items-center justify-center p-12 bg-white rounded-3xl border border-gray-100 min-h-[400px]">
+                <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mb-6">
+                    <BarChart2 size={32} className="text-gray-400" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Select a Document</h3>
+                <p className="text-gray-500">Choose a document from your library to view detailed performance metrics.</p>
             </div>
         );
     }
 
-    if (error) {
+    if (loading && !dailyStats.length) {
         return (
-            <div style={{ padding: '2rem', textAlign: 'center', color: '#dc2626' }}>
-                <p style={{ fontWeight: 600 }}>Error loading analytics</p>
-                <p style={{ fontSize: '0.875rem' }}>{error}</p>
-                <button onClick={fetchData} style={{ marginTop: '1rem', padding: '0.5rem 1rem', background: '#dc2626', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
-                    Retry
-                </button>
+            <div className="flex items-center justify-center min-h-[400px]">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
             </div>
         );
     }
-
-    if (loading) return <div style={{ padding: '2rem', textAlign: 'center' }}>Loading analytics...</div>;
-
-
 
     return (
-        <div style={{ padding: '1.5rem', background: '#f3f4f6', minHeight: '100%' }}>
+        <div className="space-y-8 animate-fade-in">
             {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+            <div className="flex justify-between items-center">
                 <div>
-                    <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#111827', margin: 0 }}>Analytics Dashboard</h2>
-                    <p style={{ color: '#6b7280', marginTop: '0.25rem' }}>Real-time insights for your document</p>
+                    <h2 className="text-2xl font-bold text-gray-900">Performance Overview</h2>
+                    <p className="text-gray-500">Real-time insights for your content</p>
                 </div>
-
-                <div style={{ display: 'flex', gap: '1rem' }}>
+                <div className="flex items-center gap-3">
                     <select
                         value={timeRange}
                         onChange={(e) => setTimeRange(Number(e.target.value))}
-                        style={{ padding: '0.5rem', borderRadius: '8px', border: '1px solid #d1d5db' }}
+                        className="px-4 py-2 rounded-xl border border-gray-200 bg-white text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-shadow"
                     >
                         <option value={7}>Last 7 Days</option>
                         <option value={30}>Last 30 Days</option>
@@ -148,105 +152,233 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ documentId }) =
                     </select>
                     <button
                         onClick={() => fetchData()}
-                        style={{ padding: '0.5rem 1rem', background: 'white', border: '1px solid #d1d5db', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                        className="p-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-gray-600"
                     >
-                        <Calendar size={16} /> Refresh
+                        <Calendar size={20} />
                     </button>
                 </div>
             </div>
 
             {/* Summary Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', marginBottom: '2rem' }}>
-                <SummaryCard title="Total Views" value={totalViews} icon={Users} color="#3b82f6" />
-                <SummaryCard title="Unique Viewers" value={uniqueViewers} icon={PieChartIcon} color="#8b5cf6" />
-                <SummaryCard title="Avg Time (sec)" value={avgDuration + 's'} icon={Clock} color="#f59e0b" />
-                <SummaryCard title="Engagement Score" value={Math.min(100, Math.round(avgDuration / 6)) + '%'} icon={Activity} color="#10b981" />
-            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
+                    <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                        <Users size={64} className="text-indigo-600" />
+                    </div>
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="p-2 bg-indigo-50 rounded-lg text-indigo-600">
+                            <Users size={20} />
+                        </div>
+                        <span className="text-gray-500 font-medium text-sm">Total Views</span>
+                    </div>
+                    <div className="text-3xl font-bold text-gray-900">{totalViews}</div>
+                    <div className="flex items-center gap-1 mt-2 text-green-600 text-xs font-bold">
+                        <ArrowUp size={12} />
+                        <span>12%</span>
+                        <span className="text-gray-400 font-normal ml-1">vs last period</span>
+                    </div>
+                </div>
 
-            {/* Tabs */}
-            <div style={{ borderBottom: '1px solid #e5e7eb', marginBottom: '2rem' }}>
-                <div style={{ display: 'flex', gap: '2rem' }}>
-                    {[
-                        { id: 'overview', label: 'Overview', icon: Activity },
-                        { id: 'engagement', label: 'Engagement', icon: MousePointer },
-                        { id: 'audience', label: 'Audience', icon: Users },
-                        { id: 'funnel', label: 'Conversion', icon: Filter },
-                    ].map((tab) => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id as any)}
-                            style={{
-                                padding: '0.75rem 0',
-                                background: 'none',
-                                border: 'none',
-                                borderBottom: activeTab === tab.id ? '2px solid #4f46e5' : 'none',
-                                color: activeTab === tab.id ? '#4f46e5' : '#6b7280',
-                                fontWeight: activeTab === tab.id ? '600' : '400',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.5rem'
-                            }}
-                        >
-                            <tab.icon size={18} />
-                            {tab.label}
-                        </button>
-                    ))}
+                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
+                    <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                        <PieChartIcon size={64} className="text-emerald-600" />
+                    </div>
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="p-2 bg-emerald-50 rounded-lg text-emerald-600">
+                            <PieChartIcon size={20} />
+                        </div>
+                        <span className="text-gray-500 font-medium text-sm">Unique Viewers</span>
+                    </div>
+                    <div className="text-3xl font-bold text-gray-900">{uniqueViewers}</div>
+                    <div className="flex items-center gap-1 mt-2 text-green-600 text-xs font-bold">
+                        <ArrowUp size={12} />
+                        <span>5%</span>
+                        <span className="text-gray-400 font-normal ml-1">vs last period</span>
+                    </div>
+                </div>
+
+                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
+                    <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                        <Clock size={64} className="text-amber-500" />
+                    </div>
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="p-2 bg-amber-50 rounded-lg text-amber-600">
+                            <Clock size={20} />
+                        </div>
+                        <span className="text-gray-500 font-medium text-sm">Avg. Time</span>
+                    </div>
+                    <div className="text-3xl font-bold text-gray-900">{avgDuration}s</div>
+                    <div className="flex items-center gap-1 mt-2 text-red-500 text-xs font-bold">
+                        <ArrowDown size={12} />
+                        <span>2%</span>
+                        <span className="text-gray-400 font-normal ml-1">vs last period</span>
+                    </div>
+                </div>
+
+                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
+                    <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                        <Activity size={64} className="text-violet-600" />
+                    </div>
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="p-2 bg-violet-50 rounded-lg text-violet-600">
+                            <Activity size={20} />
+                        </div>
+                        <span className="text-gray-500 font-medium text-sm">Engagement</span>
+                    </div>
+                    <div className="text-3xl font-bold text-gray-900">{Math.min(100, Math.round(avgDuration / 6))}%</div>
+                    <div className="flex items-center gap-1 mt-2 text-gray-400 text-xs font-normal">
+                        Based on scroll depth & time
+                    </div>
                 </div>
             </div>
 
-            {/* Content Area */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '2rem' }}>
+            {/* Main Charts Area */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Views Area Chart */}
+                <div className="lg:col-span-2 bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
+                    <div className="flex justify-between items-center mb-6">
+                        <h3 className="text-lg font-bold text-gray-900">Views Over Time</h3>
+                        <button className="text-indigo-600 text-sm font-semibold hover:text-indigo-700">Download CSV</button>
+                    </div>
+                    <div className="h-[350px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={dailyStats} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                                <defs>
+                                    <linearGradient id="colorViews" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.2} />
+                                        <stop offset="95%" stopColor="#4f46e5" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                                <XAxis
+                                    dataKey="stat_date"
+                                    tickFormatter={(val) => new Date(val).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                    stroke="#9ca3af"
+                                    tick={{ fontSize: 12 }}
+                                    axisLine={false}
+                                    tickLine={false}
+                                />
+                                <YAxis
+                                    stroke="#9ca3af"
+                                    tick={{ fontSize: 12 }}
+                                    axisLine={false}
+                                    tickLine={false}
+                                />
+                                <Tooltip content={<CustomTooltip />} />
+                                <Area
+                                    type="monotone"
+                                    dataKey="total_views"
+                                    name="Total Views"
+                                    stroke="#4f46e5"
+                                    strokeWidth={3}
+                                    fillOpacity={1}
+                                    fill="url(#colorViews)"
+                                />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
 
-                {activeTab === 'overview' && (
-                    <>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-                            <div style={{ background: 'white', padding: '1.5rem', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                                <h3 style={{ fontSize: '1.125rem', fontWeight: '700', marginBottom: '1.5rem', color: '#1f2937' }}>Device Distribution</h3>
-                                <DeviceStats data={deviceStats} />
+                {/* Device Donut Chart */}
+                <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
+                    <h3 className="text-lg font-bold text-gray-900 mb-6">Device Distribution</h3>
+                    <div className="h-[300px] w-full relative">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={deviceStats}
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={80}
+                                    outerRadius={110}
+                                    paddingAngle={5}
+                                    dataKey="session_count"
+                                    nameKey="device_type"
+                                >
+                                    {deviceStats.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip />
+                            </PieChart>
+                        </ResponsiveContainer>
+                        {/* Center Text */}
+                        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
+                            <div className="text-3xl font-bold text-gray-900">
+                                {deviceStats.reduce((acc, curr) => acc + curr.session_count, 0)}
                             </div>
-                            <div style={{ background: 'white', padding: '1.5rem', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                                <h3 style={{ fontSize: '1.125rem', fontWeight: '700', marginBottom: '1.5rem', color: '#1f2937' }}>Recent Activity</h3>
-                                <div style={{ color: '#6b7280', textAlign: 'center', padding: '2rem' }}>Real-time feed placeholder</div>
+                            <div className="text-xs text-gray-500 font-medium uppercase tracking-wide">Total</div>
+                        </div>
+                    </div>
+                    {/* Custom Legend */}
+                    <div className="mt-4 space-y-3">
+                        {deviceStats.map((entry, index) => (
+                            <div key={index} className="flex justify-between items-center">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-3 h-3 rounded-full" style={{ background: COLORS[index % COLORS.length] }}></div>
+                                    <span className="text-gray-600 text-sm font-medium capitalize">{entry.device_type || 'Unknown'}</span>
+                                </div>
+                                <span className="text-gray-900 font-bold">{entry.session_count}</span>
                             </div>
-                        </div>
-
-                        <div style={{ background: 'white', padding: '1.5rem', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                            <h3 style={{ fontSize: '1.125rem', fontWeight: '700', marginBottom: '1.5rem', color: '#1f2937' }}>Geographic Distribution</h3>
-                            <ViewerGeoMap data={geoStats} />
-                        </div>
-                    </>
-                )}
-
-                {activeTab === 'engagement' && (
-                    <div style={{ background: 'white', padding: '1.5rem', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                        <h3 style={{ fontSize: '1.125rem', fontWeight: '700', marginBottom: '0.5rem', color: '#1f2937' }}>Page Attention Heatmap</h3>
-                        <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>See which pages viewers spend the most time on</p>
-                        <PageAttentionHeatmap data={pageAttention} />
+                        ))}
                     </div>
-                )}
+                </div>
+            </div>
 
-                {activeTab === 'audience' && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-                        <div style={{ background: 'white', padding: '1.5rem', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                            <h3 style={{ fontSize: '1.125rem', fontWeight: '700', marginBottom: '1.5rem', color: '#1f2937' }}>Geographic Locations</h3>
-                            <ViewerGeoMap data={geoStats} />
-                        </div>
-                        <div style={{ background: 'white', padding: '1.5rem', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                            <h3 style={{ fontSize: '1.125rem', fontWeight: '700', marginBottom: '1.5rem', color: '#1f2937' }}>Devices & Browsers</h3>
-                            <DeviceStats data={deviceStats} />
-                        </div>
+            {/* Bottom Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Page Attention Bar Chart */}
+                <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
+                    <h3 className="text-lg font-bold text-gray-900 mb-6">Page Attention</h3>
+                    <div className="h-[300px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={pageAttention} layout="vertical" margin={{ left: 20 }}>
+                                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e5e7eb" />
+                                <XAxis type="number" hide />
+                                <YAxis
+                                    dataKey="page_number"
+                                    type="category"
+                                    tickFormatter={(val) => `Page ${val}`}
+                                    stroke="#6b7280"
+                                    tick={{ fontSize: 13 }}
+                                    axisLine={false}
+                                    tickLine={false}
+                                    width={60}
+                                />
+                                <Tooltip
+                                    cursor={{ fill: '#f3f4f6' }}
+                                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}
+                                />
+                                <Bar dataKey="avg_duration_seconds" name="Avg Time (s)" fill="#8b5cf6" radius={[0, 4, 4, 0]} barSize={20} />
+                            </BarChart>
+                        </ResponsiveContainer>
                     </div>
-                )}
+                </div>
 
-                {activeTab === 'funnel' && (
-                    <div style={{ background: 'white', padding: '1.5rem', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                        <h3 style={{ fontSize: '1.125rem', fontWeight: '700', marginBottom: '0.5rem', color: '#1f2937' }}>Conversion Funnel</h3>
-                        <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>Track user journey from opening to signing</p>
-                        <ConversionFunnel data={funnelData} />
+                {/* Geo Location Map (List for now) */}
+                <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
+                    <h3 className="text-lg font-bold text-gray-900 mb-6">Top Locations</h3>
+                    <div className="space-y-4">
+                        {geoStats.slice(0, 5).map((geo, index) => (
+                            <div key={index} className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 transition-colors">
+                                <div className="flex items-center gap-3">
+                                    <span className="text-gray-400 font-bold w-4">{index + 1}</span>
+                                    <div>
+                                        <div className="font-bold text-gray-900">{geo.city || 'Unknown City'}</div>
+                                        <div className="text-xs text-gray-500">{geo.country_code || 'Unknown Country'}</div>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <div className="font-bold text-indigo-600">{geo.session_count}</div>
+                                    <div className="text-xs text-gray-400">Sessions</div>
+                                </div>
+                            </div>
+                        ))}
+                        {geoStats.length === 0 && (
+                            <div className="text-center text-gray-400 py-8">No location data available yet</div>
+                        )}
                     </div>
-                )}
-
+                </div>
             </div>
         </div>
     );

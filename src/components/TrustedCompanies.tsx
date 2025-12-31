@@ -52,10 +52,7 @@ const TrustedCompanies: React.FC = () => {
                 <span className="mistral-text">Mistral AI</span>
             </div>
 
-            {/* Stripe */}
-            <div className="company-logo-item">
-                <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 900, fontSize: '1.8rem', color: '#635bff', letterSpacing: '-0.02em' }}>stripe</span>
-            </div>
+
 
             {/* Airbnb */}
             <div className="company-logo-item">

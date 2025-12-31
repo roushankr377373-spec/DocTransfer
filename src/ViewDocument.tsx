@@ -110,6 +110,7 @@ const ViewDocument: React.FC = () => {
         logo_url?: string;
         brand_color?: string;
         site_url?: string;
+        remove_branding?: boolean;
     } | null>(null);
 
     useEffect(() => {
@@ -254,30 +255,28 @@ const ViewDocument: React.FC = () => {
         }
     };
 
+    // Track View Logic
     const trackView = async (documentId: string) => {
         try {
-            // 1. Create Session
+            // 1. Get/Create Session Logic
             let geoData = null;
             try {
-                const res = await fetch('https://geolocation-db.com/json/');
-                geoData = await res.json();
+                // Try a privacy-friendly IP/location service if available, or just send null to let backend/edge handle it
+                // For this demo we'll skip external fetch to avoid CORS blocks on localhost, backend will handle IP
             } catch (e) {
                 console.warn('Failed to fetch geolocation', e);
             }
 
+            // Create Session
             const { data: sessionData, error: sessionError } = await supabase
                 .from('document_access_sessions')
                 .insert({
                     document_id: documentId,
                     user_agent: navigator.userAgent,
-                    geolocation: geoData
+                    // geolocation: geoData // Let supabase edge/triggers handle this if possible, or backend
                 })
-                .select('session_id') // Correct column name
+                .select('session_id')
                 .single();
-
-            if (sessionData) {
-                setCurrentSessionId(sessionData.session_id);
-            }
 
             if (sessionError) {
                 console.error('Session creation failed:', sessionError);
@@ -285,41 +284,45 @@ const ViewDocument: React.FC = () => {
             }
 
             if (sessionData) {
-                // 2. Track View (Initial)
+                setCurrentSessionId(sessionData.session_id);
+
+                // 2. Track View (Initial Page 1)
                 const { data: viewData, error: viewError } = await supabase
                     .from('document_view_tracking')
                     .insert({
                         session_id: sessionData.session_id,
                         document_id: documentId,
-                        page_number: 1 // Default to page 1 for now
+                        page_number: 1
                     })
                     .select('id')
                     .single();
 
                 if (viewData && !viewError) {
-                    // Set up duration tracking
+                    // Start Heartbeat for Duration
                     const startTime = Date.now();
-                    const updateDuration = () => {
+                    const heartbeatInterval = setInterval(async () => {
                         const duration = Math.round((Date.now() - startTime) / 1000);
-                        if (duration > 0) {
-                            supabase
+                        if (duration > 0 && duration % 5 === 0) { // Update every 5 seconds
+                            await supabase
                                 .from('document_view_tracking')
                                 .update({ duration_seconds: duration })
-                                .eq('id', viewData.id)
-                                .then(() => { }); // Fire and forget
+                                .eq('id', viewData.id);
                         }
+                    }, 5000);
+
+                    // Cleanup
+                    const cleanup = () => {
+                        clearInterval(heartbeatInterval);
+                        const finalDuration = Math.round((Date.now() - startTime) / 1000);
+                        supabase
+                            .from('document_view_tracking')
+                            .update({ duration_seconds: finalDuration })
+                            .eq('id', viewData.id)
+                            .then(() => { });
                     };
 
-                    // Update on unmount or page hide
-                    window.addEventListener('beforeunload', updateDuration);
-                    // Also update every 10 seconds for real-time feel
-                    const intervalId = setInterval(updateDuration, 10000);
-
-                    return () => {
-                        window.removeEventListener('beforeunload', updateDuration);
-                        clearInterval(intervalId);
-                        updateDuration();
-                    };
+                    window.addEventListener('beforeunload', cleanup);
+                    return cleanup;
                 }
             }
         } catch (err) {
@@ -795,9 +798,11 @@ const ViewDocument: React.FC = () => {
                         ))}
                     </div>
 
-                    <div style={{ marginTop: '2rem', textAlign: 'center', color: '#9ca3af', fontSize: '0.8rem' }}>
-                        Powered by DocTransfer
-                    </div>
+                    {!branding?.remove_branding && (
+                        <div style={{ marginTop: '2rem', textAlign: 'center', color: '#9ca3af', fontSize: '0.8rem' }}>
+                            Powered by DocTransfer
+                        </div>
+                    )}
                 </div>
             </div>
         );

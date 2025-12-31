@@ -12,48 +12,17 @@ import {
     Zap,
     HelpCircle
 } from 'lucide-react';
-import { createCheckoutSession, getPriceId } from './utils/stripe';
 
 const Pricing: React.FC = () => {
     const { user } = useUser();
-    const [loading, setLoading] = useState<string | null>(null);
-    const [error, setError] = useState<string | null>(null);
+    // const [loading, setLoading] = useState<string | null>(null);
+    // const [error, setError] = useState<string | null>(null);
 
 
     const handleSubscribe = async (planType: 'standard' | 'business') => {
-        if (!user) {
-            setError('Please sign in to subscribe');
-            return;
-        }
-
-        try {
-            setLoading(planType);
-            setError(null);
-            const priceId = getPriceId(planType);
-            await createCheckoutSession({
-                priceId,
-                userId: user.id,
-                planType,
-            });
-        } catch (err) {
-            console.error('Subscription error:', err);
-            let errorMessage = 'Failed to start checkout. ';
-
-            if (err instanceof Error) {
-                // Check if error message contains configuration hints
-                if (err.message.includes('Invalid payment gateway credentials') ||
-                    err.message.includes('configuration error')) {
-                    errorMessage = err.message + ' The payment system needs to be configured with valid Stripe keys.';
-                } else if (err.message.includes('Price ID not found')) {
-                    errorMessage = 'Payment plan not configured. Please contact support.';
-                } else {
-                    errorMessage += err.message;
-                }
-            }
-
-            setError(errorMessage);
-            setLoading(null);
-        }
+        // Stripe integration removed
+        // setError('Payment gateway is currently under maintenance. Please contact sales.');
+        console.log('Subscribe clicked for:', planType);
     };
 
     const plans = [
@@ -66,12 +35,15 @@ const Pricing: React.FC = () => {
             target: 'Individuals & personal use',
             description: 'Perfect for trying out DocTransfer',
             features: [
-                { text: '10 document uploads per month', included: true },
-                { text: '30 MB file size limit', included: true },
+                { text: '10 document uploads per day', included: true },
+                { text: '10 MB file size limit', included: true },
                 { text: 'Basic password protection', included: true },
-                { text: 'Email verification', included: true },
-                { text: '30-day document storage', included: true },
+                { text: 'Email verification', included: false },
+                { text: 'Screenshot protection', included: false },
+                { text: '1-day document storage', included: true },
                 { text: 'Download controls', included: true },
+                { text: 'Link expiration controls', included: true },
+                { text: 'Burn After Reading', included: true },
                 { text: 'Basic analytics', included: true },
                 { text: 'DocTransfer branding', included: true },
                 { text: 'Custom branding', included: false },
@@ -101,18 +73,24 @@ const Pricing: React.FC = () => {
                 { text: '500MB file size limit', included: true },
                 { text: 'Custom branding (logo & colors)', included: true },
                 { text: 'Dynamic watermarking', included: true },
-                { text: 'Link expiration controls', included: true },
-                { text: 'Burn After Reading', included: true },
                 { text: 'Advanced analytics with page tracking', included: true },
                 { text: 'Audit trails', included: true },
                 { text: 'Email notifications', included: true },
+                { text: 'Email verification', included: true },
+                { text: 'Screenshot protection', included: true },
                 { text: 'Priority support', included: true },
                 { text: '1-year document storage', included: true },
                 { text: 'Biometric authentication', included: false },
                 { text: 'SSO integration', included: false }
             ],
-            cta: 'Get Started',
+            upcomingFeatures: [
+                { text: 'Slack Integration' },
+                { text: 'Team Management Dashboard' }
+            ],
+
+            cta: 'Coming Soon',
             ctaLink: '/dataroom',
+            isComingSoon: true,
             popular: true,
             gradient: 'linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%)',
             glowColor: 'rgba(168, 85, 247, 0.5)',
@@ -143,8 +121,15 @@ const Pricing: React.FC = () => {
                 { text: 'Custom integrations', included: true },
                 { text: 'SLA guarantee', included: true }
             ],
-            cta: 'Get Started',
+            upcomingFeatures: [
+                { text: 'Data Loss Prevention (DLP)' },
+                { text: 'Dedicated IP Address' },
+                { text: 'Audit Trail API' }
+            ],
+
+            cta: 'Coming Soon',
             ctaLink: '/dataroom',
+            isComingSoon: true,
             popular: false,
             gradient: 'linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%)',
             glowColor: 'rgba(6, 182, 212, 0.5)',
@@ -295,24 +280,7 @@ const Pricing: React.FC = () => {
 
                 {/* Pricing Cards */}
                 <section style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 2rem' }}>
-                    {error && (
-                        <div style={{
-                            background: '#fef2f2',
-                            border: '1px solid #fecaca',
-                            color: '#991b1b',
-                            padding: '1rem',
-                            borderRadius: '12px',
-                            marginBottom: '2rem',
-                            textAlign: 'center',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '0.5rem'
-                        }}>
-                            <X size={18} />
-                            {error}
-                        </div>
-                    )}
+
 
                     <div style={{
                         display: 'grid',
@@ -412,41 +380,51 @@ const Pricing: React.FC = () => {
                                             </span>
                                         </li>
                                     ))}
+
+                                    {/* Upcoming Features */}
+                                    {(plan as any).upcomingFeatures && (plan as any).upcomingFeatures.length > 0 && (
+                                        <>
+                                            <li style={{ marginTop: '1.5rem', marginBottom: '0.75rem', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: '#64748b', textTransform: 'uppercase' }}>
+                                                Coming Soon
+                                            </li>
+                                            {(plan as any).upcomingFeatures.map((feature: any, uIndex: number) => (
+                                                <li key={`u-${uIndex}`} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                                                    <div style={{ background: '#f59e0b', borderRadius: '50%', padding: '2px', marginTop: '2px' }}>
+                                                        <Sparkles size={12} color="white" />
+                                                    </div>
+                                                    <span style={{ fontSize: '0.9rem', color: '#64748b' }}>
+                                                        {feature.text}
+                                                    </span>
+                                                </li>
+                                            ))}
+                                        </>
+                                    )}
                                 </ul>
 
                                 {plan.planType ? (
                                     <button
-                                        onClick={() => handleSubscribe(plan.planType!)}
-                                        disabled={loading === plan.planType}
+                                        // onClick={() => handleSubscribe(plan.planType!)}
+                                        // disabled={loading === plan.planType || (plan as any).isComingSoon}
                                         style={{
                                             width: '100%',
                                             padding: '1rem',
                                             borderRadius: '12px',
                                             border: 'none',
-                                            background: plan.gradient,
+                                            background: '#3b82f6', // Blue background
                                             color: 'white',
                                             fontWeight: 600,
-                                            cursor: loading === plan.planType ? 'wait' : 'pointer',
+                                            // cursor: loading === plan.planType || (plan as any).isComingSoon ? 'not-allowed' : 'pointer',
+                                            cursor: 'not-allowed',
                                             transition: 'all 0.2s',
                                             display: 'flex',
                                             justifyContent: 'center',
                                             alignItems: 'center',
                                             gap: '0.5rem',
-                                            boxShadow: `0 4px 12px ${plan.glowColor}`
-                                        }}
-                                        onMouseEnter={e => {
-                                            if (loading !== plan.planType) {
-                                                e.currentTarget.style.transform = 'translateY(-2px)';
-                                                e.currentTarget.style.boxShadow = `0 8px 16px ${plan.glowColor}`;
-                                            }
-                                        }}
-                                        onMouseLeave={e => {
-                                            e.currentTarget.style.transform = 'translateY(0)';
-                                            e.currentTarget.style.boxShadow = `0 4px 12px ${plan.glowColor}`;
+                                            boxShadow: 'none' // Removed glow
                                         }}
                                     >
-                                        {loading === plan.planType ? 'Processing...' : plan.cta}
-                                        {!loading && <Zap size={16} />}
+                                        Coming Soon
+                                        {/* {!loading && <Zap size={16} />} */}
                                     </button>
                                 ) : (
                                     <Link to={plan.ctaLink} style={{ textDecoration: 'none' }}>
