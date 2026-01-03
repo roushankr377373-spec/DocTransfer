@@ -457,48 +457,7 @@ const Pricing: React.FC = () => {
                     </div>
                 </section>
 
-                {/* FAQ Section */}
-                <section style={{ maxWidth: '800px', margin: '6rem auto 0', padding: '0 2rem' }}>
-                    <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-                        <h2 style={{ fontSize: '2.5rem', fontWeight: 700, marginBottom: '1rem', color: '#0f172a' }}>Frequently Asked Questions</h2>
-                        <p style={{ color: '#64748b' }}>Everything you need to know about our pricing and plans.</p>
-                    </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                        {[
-                            {
-                                q: "Can I switch plans anytime?",
-                                a: "Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately and we'll prorate any billing differences."
-                            },
-                            {
-                                q: "Is there a free trial for paid plans?",
-                                a: "Yes! We offer a 14-day free trial for both Standard and Business plans. No credit card required to start."
-                            },
-                            {
-                                q: "What payment methods do you accept?",
-                                a: "We accept all major credit cards (Visa, Mastercard, American Express) and PayPal. Enterprise clients can also pay via invoice."
-                            },
-                            {
-                                q: "Do you offer custom enterprise plans?",
-                                a: "Absolutely! For organizations with specific needs, we offer custom enterprise solutions with tailored features, dedicated support, and flexible pricing. Contact our sales team to discuss your requirements."
-                            }
-                        ].map((item, i) => (
-                            <div key={i} style={{
-                                background: '#ffffff',
-                                borderRadius: '16px',
-                                padding: '1.5rem',
-                                border: '1px solid #e2e8f0',
-                                boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
-                            }}>
-                                <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#0f172a' }}>
-                                    <HelpCircle size={18} color="#3b82f6" />
-                                    {item.q}
-                                </h3>
-                                <p style={{ color: '#64748b', lineHeight: 1.6, margin: 0, paddingLeft: '26px' }}>{item.a}</p>
-                            </div>
-                        ))}
-                    </div>
-                </section>
 
                 {/* Final CTA */}
                 <section style={{
