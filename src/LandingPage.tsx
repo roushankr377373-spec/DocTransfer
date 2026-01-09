@@ -200,7 +200,19 @@ const LandingPage: React.FC = () => {
           </div>
           <SignedOut>
             <SignInButton mode="modal">
-              <button className="btn-primary">Sign In</button>
+              <button
+                className="btn-primary"
+                style={{
+                  padding: '0.75rem 1.75rem',
+                  fontSize: '1.05rem',
+                  fontWeight: 700,
+                  borderRadius: '14px',
+                  boxShadow: '0 4px 14px 0 rgba(99, 102, 241, 0.39)',
+                  letterSpacing: '0.025em'
+                }}
+              >
+                Sign In
+              </button>
             </SignInButton>
           </SignedOut>
           <SignedIn>
