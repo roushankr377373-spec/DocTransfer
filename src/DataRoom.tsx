@@ -117,7 +117,7 @@ const DataRoom: React.FC = () => {
     const [signingLinks, setSigningLinks] = useState<any[]>([]);
 
     // Subscription and premium features
-    const { subscription, usage, isLoading: subLoading, isFeatureLocked, getRemainingUploads, getMaxFileSize } = useSubscription();
+    const { subscription, usage, dailyUploadCount, isLoading: subLoading, isFeatureLocked, getRemainingUploads, getMaxFileSize, refreshSubscription } = useSubscription();
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
     const [lockedFeatureName, setLockedFeatureName] = useState<string | undefined>();
 
@@ -140,6 +140,7 @@ const DataRoom: React.FC = () => {
 
     useEffect(() => {
         fetchDocuments();
+        refreshSubscription(); // Refresh counts on load
     }, []);
 
     const fetchDocuments = async () => {
@@ -252,6 +253,15 @@ const DataRoom: React.FC = () => {
 
     const handleUpload = async () => {
         if (selectedFiles.length === 0) return;
+
+        // Check file sizes
+        const maxSizeBytes = getMaxFileSize();
+        const oversizeFiles = selectedFiles.filter(f => f.size > maxSizeBytes);
+        if (oversizeFiles.length > 0) {
+            const formatSize = (bytes: number) => (bytes / (1024 * 1024)).toFixed(0);
+            setUploadError(`File too large. Maximum size is ${formatSize(maxSizeBytes)}MB. The following files are too large: ${oversizeFiles.map(f => f.name).join(', ')}`);
+            return;
+        }
 
         if (selectedFiles.length > 1 && isFeatureLocked('document_bundles')) {
             handleLockedFeatureClick('Document Bundles');
@@ -434,14 +444,13 @@ const DataRoom: React.FC = () => {
             if (bundleId && bundleShareLink) {
                 const finalBundleLink = `${window.location.origin}/view/${bundleShareLink}`;
                 setUploadedBundleLink(finalBundleLink);
-                // We don't set uploadedDoc for bundle, or we set the first one?
-                // Let's set uploadedDoc to null to avoid confusion, or use a new success state.
-                // Or effectively treat the first doc as the "primary" one for some UI logic if needed.
                 setUploadedDoc(uploadedDocs[0]); // Just to trigger "Success" UI if it relies on this
             } else {
                 setUploadedDoc(uploadedDocs[0]);
                 setUploadedBundleLink(null);
             }
+
+            refreshSubscription(); // Refresh daily limit count
 
             // Update subscription usage
             if (user?.id) {
@@ -716,8 +725,8 @@ const DataRoom: React.FC = () => {
                                     {/* Usage Limit Banner for Free Plan */}
                                     {subscription && (
                                         <UsageLimitBanner
-                                            currentUploads={usage?.documents_uploaded || 0}
-                                            maxUploads={10}
+                                            currentUploads={subscription.plan_type === 'free' ? dailyUploadCount : (usage?.documents_uploaded || 0)}
+                                            maxUploads={subscription.plan_type === 'free' ? 10 : 300} // daily vs monthly
                                             planType={subscription.plan_type}
                                         />
                                     )}
@@ -727,16 +736,21 @@ const DataRoom: React.FC = () => {
                                         onDragOver={handleDragOver}
                                         onDragLeave={handleDragLeave}
                                         onDrop={handleDrop}
-                                        onClick={() => document.getElementById('file-upload')?.click()}
+                                        onClick={() => {
+                                            if (getRemainingUploads() > 0) {
+                                                document.getElementById('file-upload')?.click();
+                                            }
+                                        }}
                                         style={{
                                             padding: '3rem 2rem',
                                             border: isDragging ? '2px dashed #4f46e5' : selectedFiles.length > 0 ? '2px dashed #10b981' : '2px dashed #e5e7eb',
                                             borderRadius: '12px',
                                             textAlign: 'center',
-                                            cursor: 'pointer',
+                                            cursor: getRemainingUploads() > 0 ? 'pointer' : 'not-allowed',
                                             marginBottom: '1.5rem',
-                                            background: isDragging ? '#f0f4ff' : selectedFiles.length > 0 ? '#f0fdf4' : '#fafbfc',
-                                            transition: 'all 0.2s'
+                                            background: isDragging ? '#f0f4ff' : selectedFiles.length > 0 ? '#f0fdf4' : (getRemainingUploads() > 0 ? '#fafbfc' : '#f3f4f6'),
+                                            transition: 'all 0.2s',
+                                            opacity: getRemainingUploads() > 0 ? 1 : 0.6
                                         }}
                                     >
                                         {/* Icon with checkmark when file selected */}
@@ -784,14 +798,16 @@ const DataRoom: React.FC = () => {
                                             )}
                                         </div>
                                         {selectedFiles.length === 0 && (
-                                            <p style={{ fontSize: '0.8rem', color: '#9ca3af', marginTop: '0.25rem' }}>Maximum file size: 30 MB per file</p>
+                                            <p style={{ fontSize: '0.8rem', color: '#9ca3af', marginTop: '0.25rem' }}>
+                                                Maximum file size: {subscription?.plan_type === 'free' ? '10 MB' : 'Unlimited'} per file
+                                            </p>
                                         )}
                                         <input
                                             type="file"
                                             onChange={handleFileInput}
                                             id="file-upload"
                                             accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
-                                            disabled={isUploading}
+                                            disabled={isUploading || getRemainingUploads() <= 0}
                                             multiple // Enable multiple selection
                                             style={{ display: 'none' }}
                                         />

@@ -17,9 +17,10 @@ const UsageLimitBanner: React.FC<UsageLimitBannerProps> = ({
     if (planType !== 'free') return null;
 
     const percentage = (currentUploads / maxUploads) * 100;
-    const remaining = maxUploads - currentUploads;
+    const remaining = Math.max(0, maxUploads - currentUploads);
     const isNearLimit = percentage >= 80;
     const isAtLimit = currentUploads >= maxUploads;
+    const isDaily = maxUploads <= 31; // Assume small limit means daily
 
     // Determine colors based on usage
     const getColors = () => {
@@ -76,7 +77,7 @@ const UsageLimitBanner: React.FC<UsageLimitBannerProps> = ({
                             margin: 0,
                             marginBottom: '0.125rem'
                         }}>
-                            {isAtLimit ? 'Upload Limit Reached' : `${remaining} upload${remaining !== 1 ? 's' : ''} remaining this month`}
+                            {isAtLimit ? 'Upload Limit Reached' : `${remaining} upload${remaining !== 1 ? 's' : ''} remaining ${isDaily ? 'today' : 'this month'}`}
                         </h4>
                         <p style={{
                             fontSize: '0.75rem',
@@ -85,8 +86,8 @@ const UsageLimitBanner: React.FC<UsageLimitBannerProps> = ({
                             margin: 0
                         }}>
                             {isAtLimit
-                                ? 'Upgrade to continue uploading documents'
-                                : `Using ${currentUploads} of ${maxUploads} monthly uploads`
+                                ? `You've reached your ${isDaily ? 'daily' : 'monthly'} upload limit. Upgrade for unlimited uploads.`
+                                : `Using ${currentUploads} of ${maxUploads} ${isDaily ? 'daily' : 'monthly'} uploads`
                             }
                         </p>
                     </div>

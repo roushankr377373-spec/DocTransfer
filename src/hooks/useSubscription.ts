@@ -5,8 +5,6 @@ import { supabase } from '../lib/supabase';
 export interface Subscription {
     id: string;
     user_id: string;
-    // stripe_customer_id: string | null;
-    // stripe_subscription_id: string | null;
     plan_type: 'free' | 'standard' | 'business';
     status: 'active' | 'canceled' | 'past_due' | 'trialing' | 'incomplete';
     current_period_start: string | null;
@@ -30,8 +28,16 @@ export const useSubscription = () => {
     const { user } = useUser();
     const [subscription, setSubscription] = useState<Subscription | null>(null);
     const [usage, setUsage] = useState<SubscriptionUsage | null>(null);
+    const [dailyUploadCount, setDailyUploadCount] = useState<number>(0);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
+
+    // Refresh trigger
+    const [refreshKey, setRefreshKey] = useState(0);
+
+    const refreshSubscription = () => {
+        setRefreshKey(prev => prev + 1);
+    };
 
     useEffect(() => {
         if (!user) {
@@ -72,7 +78,7 @@ export const useSubscription = () => {
                     setSubscription(subData);
                 }
 
-                // Fetch current month usage
+                // Fetch current month usage (legacy tracking, still useful for analytics)
                 const currentMonth = new Date().toISOString().slice(0, 7) + '-01';
                 const { data: usageData, error: usageError } = await supabase
                     .from('subscription_usage')
@@ -90,6 +96,21 @@ export const useSubscription = () => {
                     storage_used: 0,
                     month: currentMonth
                 });
+
+                // Fetch DAILY upload count (Logic for new Free Plan limit)
+                const todayStart = new Date();
+                todayStart.setHours(0, 0, 0, 0);
+                const todayISO = todayStart.toISOString();
+
+                const { count, error: countError } = await supabase
+                    .from('documents')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('user_id', user.id)
+                    .gte('created_at', todayISO);
+
+                if (!countError) {
+                    setDailyUploadCount(count || 0);
+                }
 
                 setError(null);
             } catch (err) {
@@ -145,7 +166,7 @@ export const useSubscription = () => {
             supabase.removeChannel(channel);
             supabase.removeChannel(usageChannel);
         };
-    }, [user]);
+    }, [user, refreshKey]);
 
     /**
      * Check if user can upload based on their plan and usage
@@ -158,15 +179,15 @@ export const useSubscription = () => {
             return true;
         }
 
-        // Free plan: check if under 300 uploads this month (approx 10/day)
-        return (usage?.documents_uploaded || 0) < 300;
+        // Free plan: check if under 10 uploads TODAY
+        return dailyUploadCount < 10;
     };
 
     /**
      * Get max file size for user's plan (in bytes)
      */
     const getMaxFileSize = (): number => {
-        if (!subscription) return 30 * 1024 * 1024; // 30MB default for free
+        if (!subscription) return 10 * 1024 * 1024; // 10MB default for free
 
         switch (subscription.plan_type) {
             case 'free':
@@ -176,7 +197,7 @@ export const useSubscription = () => {
             case 'business':
                 return Infinity; // Unlimited
             default:
-                return 30 * 1024 * 1024;
+                return 10 * 1024 * 1024;
         }
     };
 
@@ -219,12 +240,12 @@ export const useSubscription = () => {
     };
 
     /**
-     * Get remaining uploads for the current month (for free plan)
+     * Get remaining uploads for the current period (Today for Free, Unlimited for Paid)
      */
     const getRemainingUploads = (): number => {
         if (!subscription || subscription.plan_type !== 'free') return Infinity; // Unlimited for paid plans
-        const currentUploads = usage?.documents_uploaded || 0;
-        return Math.max(0, 300 - currentUploads);
+
+        return Math.max(0, 10 - dailyUploadCount);
     };
 
     /**
@@ -247,12 +268,14 @@ export const useSubscription = () => {
     return {
         subscription,
         usage,
+        dailyUploadCount,
         isLoading,
         error,
         canUpload,
         getMaxFileSize,
         hasFeature,
         isFeatureLocked,
+        refreshSubscription,
 
         getRemainingUploads,
         getStorageDurationDays,
