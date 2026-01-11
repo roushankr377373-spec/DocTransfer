@@ -30,8 +30,7 @@ import GoogleDriveTab from './components/GoogleDriveTab';
 import AnalyticsDashboard from './components/analytics/AnalyticsDashboard';
 import DashboardAnimation from './components/DashboardAnimation';
 import AuditTrail from './components/AuditTrail';
-import SignerManagement, { type Signer } from './components/SignerManagement';
-import SignatureFieldEditor, { type SignatureField } from './components/SignatureFieldEditor';
+
 import { logDocumentUpload } from './lib/auditLogger';
 import { registerBiometric, isBiometricAvailable } from './lib/webauthn';
 import useSubscription from './hooks/useSubscription';
@@ -101,7 +100,7 @@ const DataRoom: React.FC = () => {
         rotation: -45,
         layout: 'tiled'
     });
-    const [requestSignature, setRequestSignature] = useState(false);
+
     const [burnAfterRead, setBurnAfterRead] = useState(false);
     const [vaultMode, setVaultMode] = useState(false);
 
@@ -110,12 +109,7 @@ const DataRoom: React.FC = () => {
     const [biometricCredentialId, setBiometricCredentialId] = useState<string | null>(null);
     const [biometricRegistering, setBiometricRegistering] = useState(false);
 
-    // E-Signature State
-    const [signers, setSigners] = useState<Signer[]>([]);
-    const [, setSignatureFields] = useState<SignatureField[]>([]);
-    const [signatureWorkflowType, setSignatureWorkflowType] = useState<'sequential' | 'parallel'>('sequential');
-    const [showFieldEditor, setShowFieldEditor] = useState(false);
-    const [signingLinks, setSigningLinks] = useState<any[]>([]);
+
 
     // Subscription and premium features
     const { subscription, usage, dailyUploadCount, isLoading: subLoading, isFeatureLocked, getRemainingUploads, getMaxFileSize, refreshSubscription } = useSubscription();
@@ -489,7 +483,7 @@ const DataRoom: React.FC = () => {
             setDocuments(prev => [...uploadedDocs, ...prev]);
             setSelectedFiles([]);
 
-            // TODO: E-signature logic currently only supports single file. Disable for multi-upload for now.
+
 
         } catch (error: any) {
             console.error('Upload error:', error);
@@ -1312,108 +1306,7 @@ const DataRoom: React.FC = () => {
                                     </div>
 
                                     {/* E-Signature */}
-                                    <div style={{ padding: '1rem', border: '1px solid #f3f4f6', borderRadius: '12px', background: requestSignature ? '#fffbeb' : '#ffffff', transition: 'all 0.2s' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: requestSignature ? '1rem' : '0' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                                <div style={{ padding: '8px', background: '#fef3c7', borderRadius: '8px' }}>
-                                                    <PenTool size={18} style={{ color: '#d97706' }} />
-                                                </div>
-                                                <div>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                        <span style={{ fontSize: '0.95rem', fontWeight: '600', color: '#374151' }}>Request E-Signature</span>
-                                                        {isFeatureLocked?.('e_signature') && <PremiumBadge size={14} />}
-                                                    </div>
-                                                    <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>Collect digital signatures</span>
-                                                </div>
-                                            </div>
-                                            <label className="toggle-switch">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={requestSignature}
-                                                    onChange={(e) => {
-                                                        if (isFeatureLocked?.('e_signature')) {
-                                                            e.preventDefault();
-                                                            handleLockedFeatureClick('E-Signature Requests');
-                                                        } else {
-                                                            setRequestSignature(e.target.checked);
-                                                        }
-                                                    }}
-                                                    disabled={isFeatureLocked?.('e_signature')}
-                                                />
-                                                <span className="toggle-slider"></span>
-                                            </label>
-                                        </div>
-                                        {requestSignature && (
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                                <div style={{ padding: '0.75rem', background: '#ffffff', border: '1px solid #fcd34d', borderRadius: '8px', fontSize: '0.85rem' }}>
-                                                    <p style={{ color: '#b45309', marginBottom: '0.5rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                        <span>📝</span> E-Signature Workflow
-                                                    </p>
-                                                    <ol style={{ color: '#92400e', marginLeft: '1.25rem', lineHeight: '1.6', fontSize: '0.8rem' }}>
-                                                        <li>Add signers below</li>
-                                                        <li>Upload your document</li>
-                                                        <li>Place signature fields</li>
-                                                        <li>Get signing links</li>
-                                                    </ol>
-                                                </div>
 
-                                                {/* Workflow Type Selector */}
-                                                <div>
-                                                    <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#4b5563', display: 'block', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                                        Signing Order
-                                                    </label>
-                                                    <div style={{ display: 'flex', gap: '0.5rem', background: '#f3f4f6', padding: '0.25rem', borderRadius: '8px' }}>
-                                                        <button
-                                                            onClick={() => setSignatureWorkflowType('sequential')}
-                                                            style={{
-                                                                flex: 1,
-                                                                padding: '0.5rem',
-                                                                background: signatureWorkflowType === 'sequential' ? 'white' : 'transparent',
-                                                                color: signatureWorkflowType === 'sequential' ? '#7c3aed' : '#6b7280',
-                                                                border: 'none',
-                                                                borderRadius: '6px',
-                                                                fontSize: '0.85rem',
-                                                                fontWeight: '500',
-                                                                cursor: 'pointer',
-                                                                boxShadow: signatureWorkflowType === 'sequential' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
-                                                                transition: 'all 0.2s'
-                                                            }}
-                                                        >
-                                                            Sequential
-                                                        </button>
-                                                        <button
-                                                            onClick={() => setSignatureWorkflowType('parallel')}
-                                                            style={{
-                                                                flex: 1,
-                                                                padding: '0.5rem',
-                                                                background: signatureWorkflowType === 'parallel' ? 'white' : 'transparent',
-                                                                color: signatureWorkflowType === 'parallel' ? '#7c3aed' : '#6b7280',
-                                                                border: 'none',
-                                                                borderRadius: '6px',
-                                                                fontSize: '0.85rem',
-                                                                fontWeight: '500',
-                                                                cursor: 'pointer',
-                                                                boxShadow: signatureWorkflowType === 'parallel' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
-                                                                transition: 'all 0.2s'
-                                                            }}
-                                                        >
-                                                            Parallel
-                                                        </button>
-                                                    </div>
-                                                </div>
-
-                                                {/* Signer Management */}
-                                                <div>
-                                                    <SignerManagement
-                                                        signers={signers}
-                                                        onSignersChange={setSigners}
-                                                        workflowType={signatureWorkflowType}
-                                                        maxSigners={10}
-                                                    />
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
 
 
 
@@ -1439,15 +1332,9 @@ const DataRoom: React.FC = () => {
                                                 }
                                             }
 
-                                            // If e-signature is enabled and we have a document, show field editor
-                                            // Only support e-signature for single files
-                                            if (requestSignature && selectedFiles.length === 1 && !uploadedDoc && signers.length > 0) {
-                                                setShowFieldEditor(true);
-                                            } else {
-                                                handleUpload();
-                                            }
+                                            handleUpload();
                                         }}
-                                        disabled={selectedFiles.length === 0 || isUploading || (requestSignature && signers.length === 0)}
+                                        disabled={selectedFiles.length === 0 || isUploading}
                                         style={{
                                             marginTop: '1.5rem',
                                             width: '100%',
@@ -1528,40 +1415,7 @@ const DataRoom: React.FC = () => {
                                             </div>
                                         )}
 
-                                        {/* Signer Links */}
-                                        {signingLinks.length > 0 && (
-                                            <div style={{ padding: '1.5rem', background: '#eff6ff', borderRadius: '12px', border: '1px solid #bfdbfe' }}>
-                                                <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '1rem', color: '#1e40af' }}>Signer Links</h3>
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                                    {signingLinks.map((sl, idx) => (
-                                                        <div key={idx} style={{ padding: '0.75rem', background: 'white', borderRadius: '8px', border: '1px solid #fee2e2' }}>
-                                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                                                                <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#1f2937' }}>{sl.signer_name}</span>
-                                                                <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>{sl.signer_email}</span>
-                                                            </div>
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                                <input
-                                                                    type="text"
-                                                                    value={`${window.location.origin}/sign/${sl.signing_link}`}
-                                                                    readOnly
-                                                                    style={{ fontSize: '0.8rem', flex: 1, border: 'none', background: 'transparent', outline: 'none', color: '#4b5563' }}
-                                                                />
-                                                                <button
-                                                                    onClick={() => {
-                                                                        navigator.clipboard.writeText(`${window.location.origin}/sign/${sl.signing_link}`);
-                                                                        setCopiedId(`sl-${idx}`);
-                                                                        setTimeout(() => setCopiedId(null), 2000);
-                                                                    }}
-                                                                    style={{ background: '#f3f4f6', border: 'none', borderRadius: '4px', padding: '4px', cursor: 'pointer' }}
-                                                                >
-                                                                    {copiedId === `sl-${idx}` ? <Check size={14} color="#16a34a" /> : <Copy size={14} color="#6b7280" />}
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
+
 
                                         {/* Preview section */}
                                         {selectedFiles.length > 0 && filePreview && !uploadedDoc && !uploadedBundleLink && (
@@ -1790,141 +1644,9 @@ const DataRoom: React.FC = () => {
                 )
             }
 
-            {/* Signature Field Editor Modal */}
-            {
-                showFieldEditor && selectedFiles.length === 1 && (
-                    <SignatureFieldEditor
-                        file={selectedFiles[0]}
-                        signers={signers}
-                        onSave={(fields) => {
-                            setSignatureFields(fields);
-                            setShowFieldEditor(false);
-                            // Now upload the document with e-signature
-                            handleUpload();
-                        }}
-                        onClose={() => setShowFieldEditor(false)}
-                    />
-                )
-            }
 
-            {/* Signing Links Display (shown after successful upload with e-signature) */}
-            {
-                signingLinks.length > 0 && uploadedDoc && (
-                    <div style={{
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        background: 'rgba(0, 0, 0, 0.75)',
-                        zIndex: 10000,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '2rem'
-                    }}
-                        onClick={() => setSigningLinks([])}
-                    >
-                        <div style={{
-                            background: 'white',
-                            borderRadius: '20px',
-                            padding: '2rem',
-                            maxWidth: '600px',
-                            width: '100%',
-                            maxHeight: '80vh',
-                            overflow: 'auto'
-                        }}
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#111827', marginBottom: '1rem' }}>
-                                🎉 E-Signature Document Created!
-                            </h2>
-                            <p style={{ color: '#6b7280', marginBottom: '2rem' }}>
-                                Share these links with signers. They will sign in the order specified.
-                            </p>
 
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                {signingLinks.map((signer, index) => (
-                                    <div key={signer.id} style={{
-                                        padding: '1rem',
-                                        background: '#f9fafb',
-                                        border: '1px solid #e5e7eb',
-                                        borderRadius: '10px'
-                                    }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-                                            <div style={{
-                                                width: '32px',
-                                                height: '32px',
-                                                borderRadius: '50%',
-                                                background: ['#4f46e5', '#10b981', '#f59e0b'][index % 3],
-                                                color: 'white',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                fontWeight: '600'
-                                            }}>
-                                                {signer.signing_order || (index + 1)}
-                                            </div>
-                                            <div>
-                                                <div style={{ fontWeight: '600', color: '#111827' }}>{signer.signer_name}</div>
-                                                <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>{signer.signer_email}</div>
-                                            </div>
-                                        </div>
-                                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                            <input
-                                                type="text"
-                                                value={`${window.location.origin}/sign/${signer.signing_link}`}
-                                                readOnly
-                                                style={{
-                                                    flex: 1,
-                                                    padding: '0.5rem',
-                                                    border: '1px solid #e5e7eb',
-                                                    borderRadius: '6px',
-                                                    fontSize: '0.875rem',
-                                                    background: 'white'
-                                                }}
-                                            />
-                                            <button
-                                                onClick={() => {
-                                                    navigator.clipboard.writeText(`${window.location.origin}/sign/${signer.signing_link}`);
-                                                }}
-                                                style={{
-                                                    padding: '0.5rem 1rem',
-                                                    background: '#4f46e5',
-                                                    color: 'white',
-                                                    border: 'none',
-                                                    borderRadius: '6px',
-                                                    cursor: 'pointer',
-                                                    fontSize: '0.875rem',
-                                                    fontWeight: '500'
-                                                }}
-                                            >
-                                                Copy
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
 
-                            <button
-                                onClick={() => setSigningLinks([])}
-                                style={{
-                                    width: '100%',
-                                    marginTop: '1.5rem',
-                                    padding: '0.75rem',
-                                    background: '#f3f4f6',
-                                    border: 'none',
-                                    borderRadius: '10px',
-                                    fontWeight: '600',
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                Close
-                            </button>
-                        </div>
-                    </div>
-                )
-            }
 
             {/* Upgrade Modal */}
             <UpgradeModal
