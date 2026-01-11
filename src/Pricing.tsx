@@ -432,20 +432,23 @@ const Pricing: React.FC = () => {
                                             width: '100%',
                                             padding: '1rem',
                                             borderRadius: '12px',
-                                            border: '1px solid #e2e8f0',
-                                            background: '#f8fafc',
-                                            color: '#0f172a',
+                                            border: 'none',
+                                            background: '#3b82f6',
+                                            color: 'white',
                                             fontWeight: 600,
                                             cursor: 'pointer',
-                                            transition: 'all 0.2s'
+                                            transition: 'all 0.2s',
+                                            boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
                                         }}
                                             onMouseEnter={e => {
                                                 e.currentTarget.style.transform = 'translateY(-2px)';
-                                                e.currentTarget.style.background = '#f1f5f9';
+                                                e.currentTarget.style.background = '#2563eb';
+                                                e.currentTarget.style.boxShadow = '0 6px 16px rgba(59, 130, 246, 0.4)';
                                             }}
                                             onMouseLeave={e => {
                                                 e.currentTarget.style.transform = 'translateY(0)';
-                                                e.currentTarget.style.background = '#f8fafc';
+                                                e.currentTarget.style.background = '#3b82f6';
+                                                e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)';
                                             }}
                                         >
                                             {plan.cta}
