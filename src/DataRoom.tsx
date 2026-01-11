@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '@clerk/clerk-react';
 import {
+    ArrowLeft,
     Upload,
     FileText,
     Link as LinkIcon,
@@ -535,9 +536,32 @@ const DataRoom: React.FC = () => {
             <header style={{ background: 'white', borderBottom: '1px solid #e5e7eb', padding: '1.5rem 2rem' }}>
                 <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                        <div>
-                            <h1 style={{ fontSize: '1.75rem', fontWeight: '700', color: '#4f46e5', marginBottom: '0.5rem' }}>DocTransfer Dashboard</h1>
-                            <p style={{ fontSize: '0.95rem', color: '#6b7280' }}>Welcome back! Here's what's happening.</p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                            <button
+                                onClick={() => navigate('/')}
+                                style={{
+                                    padding: '0.625rem',
+                                    background: 'white',
+                                    border: '1px solid #e5e7eb',
+                                    borderRadius: '8px',
+                                    color: '#374151',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    transition: 'all 0.2s',
+                                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                                title="Back to Home"
+                            >
+                                <ArrowLeft size={20} />
+                            </button>
+                            <div>
+                                <h1 style={{ fontSize: '1.75rem', fontWeight: '700', color: '#4f46e5', marginBottom: '0.5rem' }}>DocTransfer Dashboard</h1>
+                                <p style={{ fontSize: '0.95rem', color: '#6b7280' }}>Welcome back! Here's what's happening.</p>
+                            </div>
                         </div>
                         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                             <button style={{ padding: '0.625rem 1.25rem', background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', color: '#374151', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
