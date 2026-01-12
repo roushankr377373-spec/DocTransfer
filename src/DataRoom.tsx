@@ -30,6 +30,7 @@ import GoogleDriveTab from './components/GoogleDriveTab';
 import AnalyticsDashboard from './components/analytics/AnalyticsDashboard';
 import DashboardAnimation from './components/DashboardAnimation';
 import AuditTrail from './components/AuditTrail';
+import ESignatureDashboard from './components/esignature/ESignatureDashboard';
 
 import { logDocumentUpload } from './lib/auditLogger';
 import { registerBiometric, isBiometricAvailable } from './lib/webauthn';
@@ -68,7 +69,7 @@ const DataRoom: React.FC = () => {
     const { user } = useUser();
     const [documents, setDocuments] = useState<Document[]>([]);
     const [isDragging, setIsDragging] = useState(false);
-    const [activeTab, setActiveTab] = useState<'upload' | 'google-drive' | 'documents' | 'analytics' | 'audit'>('upload');
+    const [activeTab, setActiveTab] = useState<'upload' | 'google-drive' | 'documents' | 'analytics' | 'audit' | 'esignature'>('upload');
     const [selectedDocumentId, setSelectedDocumentId] = useState<string | undefined>(undefined);
     const navigate = useNavigate();
 
@@ -608,6 +609,9 @@ const DataRoom: React.FC = () => {
                         <button onClick={() => setActiveTab('audit')} style={{ padding: '0.625rem 1.5rem', background: activeTab === 'audit' ? '#8b5cf6' : 'transparent', color: activeTab === 'audit' ? 'white' : '#6b7280', border: 'none', borderRadius: '8px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', transition: 'all 0.2s' }}>
                             <Shield size={16} /> Audit Trail
                         </button>
+                        <button onClick={() => setActiveTab('esignature')} style={{ padding: '0.625rem 1.5rem', background: activeTab === 'esignature' ? '#8b5cf6' : 'transparent', color: activeTab === 'esignature' ? 'white' : '#6b7280', border: 'none', borderRadius: '8px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', transition: 'all 0.2s' }}>
+                            <PenTool size={16} /> E-Signature
+                        </button>
                     </div>
                 </div>
             </header>
@@ -622,6 +626,8 @@ const DataRoom: React.FC = () => {
                     <div className="animate-fade-in">
                         <AuditTrail documentId={selectedDocumentId || documents.map(d => d.id)} />
                     </div>
+                ) : activeTab === 'esignature' ? (
+                    <ESignatureDashboard />
                 ) : activeTab === 'documents' ? (
                     <div className="animate-fade-in">
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
