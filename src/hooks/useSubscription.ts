@@ -209,12 +209,12 @@ export const useSubscription = () => {
 
         const featureMap: Record<string, string[]> = {
             'custom_branding': ['standard', 'business'],
-            'link_expiration': ['free', 'standard', 'business'],
+            'link_expiration': ['business'],
             'email_notifications': ['standard', 'business'],
             'email_verification': ['standard', 'business'],
             'screenshot_protection': ['standard', 'business'],
             'watermarking': ['standard', 'business'],
-            'burn_after_reading': ['free', 'standard', 'business'],
+            'burn_after_reading': ['business'],
             'advanced_analytics': ['standard', 'business'],
             'audit_trails': ['standard', 'business'],
             'priority_support': ['standard', 'business'],

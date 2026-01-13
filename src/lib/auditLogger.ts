@@ -369,25 +369,32 @@ export async function logExportEvent(
 /**
  * Fetch audit logs for a specific document or all documents
  */
+/**
+ * Fetch audit logs for a specific document or all documents
+ */
 export async function fetchAuditLogs(
     documentId?: string | string[],
     filters?: {
         limit?: number;
         offset?: number;
         eventType?: string;
+        startDate?: string;
+        endDate?: string;
+        userEmail?: string;
+        searchQuery?: string;
     }
 ): Promise<{ data: any[]; count: number; error?: string }> {
     try {
         let query = supabase
-            .from('recent_audit_activity')
+            .from('recent_audit_activity') // Ensure this view/table exists and has formatted columns
             .select('*', { count: 'exact' });
 
+        // 1. Document Filter
         if (documentId) {
             if (Array.isArray(documentId)) {
                 if (documentId.length > 0) {
                     query = query.in('document_id', documentId);
                 } else {
-                    // If empty array passed, return nothing (no documents to show logs for)
                     return { data: [], count: 0 };
                 }
             } else {
@@ -395,10 +402,33 @@ export async function fetchAuditLogs(
             }
         }
 
-        if (filters?.eventType) {
+        // 2. Event Type Filter
+        if (filters?.eventType && filters.eventType !== 'all') {
             query = query.eq('event_type', filters.eventType);
         }
 
+        // 3. Date Range Filter
+        if (filters?.startDate) {
+            query = query.gte('event_timestamp', filters.startDate);
+        }
+        if (filters?.endDate) {
+            // Add Time to end date to make it inclusive of the day
+            const end = new Date(filters.endDate);
+            end.setHours(23, 59, 59, 999);
+            query = query.lte('event_timestamp', end.toISOString());
+        }
+
+        // 4. User Email Filter
+        if (filters?.userEmail) {
+            query = query.ilike('user_email', `%${filters.userEmail}%`);
+        }
+
+        // 5. General Search (Metadata or Document Name)
+        if (filters?.searchQuery) {
+            query = query.or(`document_name.ilike.%${filters.searchQuery}%,user_email.ilike.%${filters.searchQuery}%`);
+        }
+
+        // 6. Sorting & Pagination
         query = query
             .order('event_timestamp', { ascending: false })
             .range(
@@ -417,5 +447,64 @@ export async function fetchAuditLogs(
     } catch (error) {
         console.error('Exception fetching audit logs:', error);
         return { data: [], count: 0, error: String(error) };
+    }
+}
+
+/**
+ * Export audit logs to CSV
+ */
+export async function exportAuditLogs(
+    documentId?: string | string[],
+    filters?: {
+        eventType?: string;
+        startDate?: string;
+        endDate?: string;
+        userEmail?: string;
+    }
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        // Fetch ALL matching logs (increase limit)
+        const { data, error } = await fetchAuditLogs(documentId, {
+            ...filters,
+            limit: 10000,
+            offset: 0
+        });
+
+        if (error) throw new Error(error);
+        if (!data || data.length === 0) throw new Error("No data to export");
+
+        // Convert to CSV
+        const headers = ['Timestamp (UTC)', 'Event Type', 'User Email', 'IP Address', 'Location', 'Document', 'Details'];
+        const csvRows = [headers.join(',')];
+
+        for (const row of data) {
+            const date = new Date(row.event_timestamp).toISOString();
+            const type = row.event_type;
+            const email = (row.user_email || row.signer_name || 'Anonymous').replace(/,/g, '');
+            const ip = row.ip_address || 'Unknown';
+            const loc = row.city ? `${row.city} ${row.country}`.replace(/,/g, '') : 'Unknown';
+            const doc = (row.document_name || '').replace(/,/g, '');
+            const details = JSON.stringify(row.event_metadata || {}).replace(/,/g, ';').replace(/"/g, "'"); // Simple escape
+
+            csvRows.push(`${date},${type},${email},${ip},${loc},${doc},"${details}"`);
+        }
+
+        const csvContent = csvRows.join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+
+        // Trigger Download
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', `audit_trail_${new Date().toISOString().slice(0, 10)}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        return { success: true };
+    } catch (error) {
+        console.error('Export failed:', error);
+        return { success: false, error: String(error) };
     }
 }

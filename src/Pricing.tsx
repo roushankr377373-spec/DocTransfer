@@ -35,20 +35,13 @@ const Pricing: React.FC = () => {
             target: 'Individuals & personal use',
             description: 'Perfect for trying out DocTransfer',
             features: [
+                { text: 'No Watermark', included: true },
                 { text: '10 document uploads per day', included: true },
                 { text: '10 MB file size limit', included: true },
                 { text: 'Basic password protection', included: true },
-                { text: 'Email verification', included: false },
-                { text: 'Screenshot protection', included: false },
                 { text: '1-day document storage', included: true },
                 { text: 'Download controls', included: true },
-                { text: 'Link expiration controls', included: true },
-                { text: 'Burn After Reading', included: true },
-                { text: 'Basic analytics', included: true },
-                { text: 'DocTransfer branding', included: true },
-                { text: 'Custom branding', included: false },
-                { text: 'Advanced analytics', included: false },
-                { text: 'Priority support', included: false }
+                { text: 'Basic analytics', included: true }
             ],
             cta: 'Get Started Free',
             ctaLink: '/dataroom',
@@ -71,21 +64,14 @@ const Pricing: React.FC = () => {
                 { text: 'Everything in Free, plus:', included: true, bold: true },
                 { text: 'Unlimited document uploads', included: true },
                 { text: '500MB file size limit', included: true },
-                { text: 'Custom branding (logo & colors)', included: true },
                 { text: 'Dynamic watermarking', included: true },
                 { text: 'Advanced analytics with page tracking', included: true },
                 { text: 'Audit trails', included: true },
-                { text: 'Email notifications', included: true },
                 { text: 'Email verification', included: true },
                 { text: 'Screenshot protection', included: true },
-                { text: 'Priority support', included: true },
                 { text: '1-year document storage', included: true },
                 { text: 'Biometric authentication', included: false },
                 { text: 'SSO integration', included: false }
-            ],
-            upcomingFeatures: [
-                { text: 'Slack Integration' },
-                { text: 'Team Management Dashboard' }
             ],
 
             cta: 'Coming Soon',
@@ -113,18 +99,11 @@ const Pricing: React.FC = () => {
                 { text: 'Biometric authentication (Face ID, Fingerprint)', included: true },
                 { text: 'E-signature requests', included: true },
                 { text: 'Document bundles (multi-file sharing)', included: true },
-                { text: 'Advanced compliance reports', included: true },
                 { text: 'SSO integration', included: true },
                 { text: 'Unlimited storage', included: true },
-                { text: 'White-label solution', included: true },
-                { text: 'Dedicated account manager', included: true },
-                { text: 'Custom integrations', included: true },
-                { text: 'SLA guarantee', included: true }
-            ],
-            upcomingFeatures: [
-                { text: 'Data Loss Prevention (DLP)' },
-                { text: 'Dedicated IP Address' },
-                { text: 'Audit Trail API' }
+                { text: 'Self-Destruct Rules', included: true },
+                { text: 'Time Expiration', included: true },
+                { text: 'View Limit', included: true }
             ],
 
             cta: 'Coming Soon',
