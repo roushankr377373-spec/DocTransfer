@@ -571,19 +571,7 @@ const DataRoom: React.FC = () => {
                                 <p style={{ fontSize: '0.95rem', color: '#6b7280' }}>Welcome back! Here's what's happening.</p>
                             </div>
                         </div>
-                        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                            <button style={{ padding: '0.625rem 1.25rem', background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', color: '#374151', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                                <UserPlus size={18} />
-                                Team
-                            </button>
-                            <button style={{ padding: '0.625rem 1.25rem', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                                <Upload size={18} />
-                                Upload Document
-                            </button>
-                            <a href="/settings" style={{ padding: '0.625rem', background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', color: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', textDecoration: 'none' }}>
-                                <Settings size={18} />
-                            </a>
-                        </div>
+
                     </div>
 
                     {/* Stats Grid / Animation */}
