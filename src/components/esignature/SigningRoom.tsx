@@ -7,8 +7,14 @@ import {
     Calendar,
     Type,
     ThumbsUp,
-    Download
+    Download,
+    Mail,
+    Building,
+    Briefcase,
+    Stamp as StampIcon
 } from 'lucide-react';
+import { STAMPS } from './StampSelector';
+import type { StampType } from './StampSelector';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import SignatureCanvasComponent from '../SignatureCanvas';
@@ -56,11 +62,15 @@ const SigningRoom: React.FC<SigningRoomProps> = ({ fileUrl, fields, onComplete, 
         } else if (field.type === 'checkbox') {
             const currentValue = fieldValues[field.id];
             setFieldValues(prev => ({ ...prev, [field.id]: currentValue ? null : 'true' }));
-        } else if (field.type === 'text') {
-            const text = prompt("Enter text:", fieldValues[field.id] || '');
+        } else if (['text', 'email', 'company', 'title'].includes(field.type)) {
+            const text = prompt(`Enter ${field.type}:`, fieldValues[field.id] || '');
             if (text !== null) {
                 setFieldValues(prev => ({ ...prev, [field.id]: text }));
             }
+        } else if (field.type === 'stamp') {
+            // For stamp, we might want an image uploader or just a standard "STAMPED" text for now.
+            // Let's simluate a stamp action
+            setFieldValues(prev => ({ ...prev, [field.id]: 'STAMPED' }));
         }
     };
 
@@ -170,27 +180,73 @@ const SigningRoom: React.FC<SigningRoomProps> = ({ fileUrl, fields, onComplete, 
                             width: drawWidth,
                             height: drawHeight,
                         });
-                    } else if (field.type === 'text' || field.type === 'date') {
+                    } else if (['text', 'date', 'email', 'company', 'title'].includes(field.type)) {
                         let textToDraw = value;
                         if (field.type === 'date') {
                             try {
-                                // Format date nicely for the PDF (e.g., Jan 1, 2024 or 1/1/2024)
                                 const dateObj = new Date(value);
                                 if (!isNaN(dateObj.getTime())) {
                                     textToDraw = dateObj.toLocaleDateString();
                                 }
                             } catch (e) {
-                                // Fallback to raw value
+                                // Fallback
                             }
                         }
 
                         page.drawText(textToDraw, {
-                            x: pdfX + 5 * scale, // padding
-                            y: pdfY + 12 * scale, // baseline adjust roughly
+                            x: pdfX + 5 * scale,
+                            y: pdfY + 12 * scale,
                             size: 12 * scale,
                             font: helveticaFont,
                             color: rgb(0, 0, 0),
                         });
+                    } else if (field.type === 'stamp') {
+                        if (field.stampType && STAMPS[field.stampType as StampType]) {
+                            try {
+                                const stampDef = STAMPS[field.stampType as StampType];
+                                const svgString = stampDef.svgString;
+
+                                // Create a blob from the SVG string
+                                const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+                                const url = URL.createObjectURL(blob);
+
+                                // Load image and rasterize
+                                const img = new Image();
+                                await new Promise((resolve, reject) => {
+                                    img.onload = resolve;
+                                    img.onerror = reject;
+                                    img.src = url;
+                                });
+
+                                const canvas = document.createElement('canvas');
+                                canvas.width = stampDef.width * 2; // 2x resolution for better quality
+                                canvas.height = stampDef.height * 2;
+                                const ctx = canvas.getContext('2d');
+                                if (ctx) {
+                                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                                    const pngDataUrl = canvas.toDataURL('image/png');
+                                    const pngImageBytes = await fetch(pngDataUrl).then(res => res.arrayBuffer());
+                                    const pngImage = await pdfDoc.embedPng(pngImageBytes);
+
+                                    page.drawImage(pngImage, {
+                                        x: pdfX,
+                                        y: pdfY,
+                                        width: (field.width || stampDef.width) * scale,
+                                        height: (field.height || stampDef.height) * scale,
+                                    });
+                                }
+                                URL.revokeObjectURL(url);
+                            } catch (e) {
+                                console.error("Failed to render stamp on PDF", e);
+                                // Fallback
+                                page.drawText('STAMP', {
+                                    x: pdfX,
+                                    y: pdfY,
+                                    size: 12 * scale,
+                                    color: rgb(1, 0, 0),
+                                });
+                            }
+                        }
                     } else if (field.type === 'checkbox') {
                         page.drawText('X', {
                             x: pdfX + 10 * scale,
@@ -373,40 +429,80 @@ const SigningRoom: React.FC<SigningRoomProps> = ({ fileUrl, fields, onComplete, 
                                 onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
                                 onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                             >
-                                {field.type === 'signature' || field.type === 'initials' ? (
-                                    value ? <img src={value} alt="Signature" style={{ maxHeight: '100%', maxWidth: '100%' }} /> : <span style={{ color: '#4f46e5', fontWeight: '600', fontSize: '12px' }}>Sign Here</span>
-                                ) : field.type === 'date' ? (
-                                    activeField === field.id ? (
-                                        <input
-                                            type="date"
-                                            autoFocus
-                                            value={value || ''}
-                                            onChange={(e) => setFieldValues(prev => ({ ...prev, [field.id]: e.target.value }))}
-                                            onBlur={() => setActiveField(null)}
-                                            style={{
-                                                width: '100%',
-                                                height: '100%',
-                                                border: 'none',
-                                                background: 'transparent',
-                                                outline: 'none',
-                                                fontSize: '12px',
-                                                fontFamily: 'inherit',
-                                                color: '#374151'
-                                            }}
-                                            onClick={(e) => e.stopPropagation()}
-                                        />
-                                    ) : (
-                                        <span style={{ fontSize: '12px', color: '#374151' }}>
-                                            {value ? new Date(value).toLocaleDateString() : <Calendar size={14} />}
-                                        </span>
-                                    )
-                                ) : field.type === 'checkbox' ? (
-                                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        {value ? <Check size={20} color="#10b981" strokeWidth={3} /> : null}
-                                    </div>
-                                ) : (
-                                    <span style={{ fontSize: '12px', color: '#374151', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value || <span style={{ color: '#9ca3af' }}>Enter text...</span>}</span>
-                                )}
+                                {(() => {
+                                    if (field.type === 'signature' || field.type === 'initials') {
+                                        return value ? (
+                                            <img src={value} alt="Signature" style={{ maxHeight: '100%', maxWidth: '100%' }} />
+                                        ) : (
+                                            <span style={{ color: '#4f46e5', fontWeight: '600', fontSize: '12px' }}>Sign Here</span>
+                                        );
+                                    }
+
+                                    if (field.type === 'date') {
+                                        if (activeField === field.id) {
+                                            return (
+                                                <input
+                                                    type="date"
+                                                    autoFocus
+                                                    value={value || ''}
+                                                    onChange={(e) => setFieldValues(prev => ({ ...prev, [field.id]: e.target.value }))}
+                                                    onBlur={() => setActiveField(null)}
+                                                    style={{ width: '100%', height: '100%', border: 'none', background: 'transparent', outline: 'none', fontSize: '12px', fontFamily: 'inherit', color: '#374151' }}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                />
+                                            );
+                                        }
+                                        return (
+                                            <span style={{ fontSize: '12px', color: '#374151' }}>
+                                                {value ? new Date(value).toLocaleDateString() : <Calendar size={14} />}
+                                            </span>
+                                        );
+                                    }
+
+                                    if (field.type === 'checkbox') {
+                                        return (
+                                            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                {value ? <Check size={20} color="#10b981" strokeWidth={3} /> : null}
+                                            </div>
+                                        );
+                                    }
+
+                                    if (field.type === 'stamp') {
+                                        return (
+                                            <div style={{ width: '100%', height: '100%' }}>
+                                                {field.stampType && STAMPS[field.stampType as StampType] ? (
+                                                    STAMPS[field.stampType as StampType].component
+                                                ) : (
+                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#e11d48' }}>
+                                                        <StampIcon size={20} />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    }
+
+                                    if (field.type === 'text') {
+                                        return (
+                                            <span style={{ fontSize: '12px', color: '#374151', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                {value || <span style={{ color: '#9ca3af' }}>Enter text...</span>}
+                                            </span>
+                                        );
+                                    }
+
+                                    // Catch-all
+                                    return (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', width: '100%', overflow: 'hidden' }}>
+                                            {!value && (
+                                                field.type === 'email' ? <Mail size={14} color="#0ea5e9" /> :
+                                                    field.type === 'company' ? <Building size={14} color="#64748b" /> :
+                                                        field.type === 'title' ? <Briefcase size={14} color="#8b5cf6" /> : null
+                                            )}
+                                            <span style={{ fontSize: '12px', color: '#374151', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                {value || <span style={{ color: '#9ca3af', textTransform: 'capitalize' }}>{field.type}</span>}
+                                            </span>
+                                        </div>
+                                    );
+                                })()}
 
                                 <div style={{ position: 'absolute', top: -20, left: 0, background: '#4f46e5', color: 'white', fontSize: '10px', padding: '2px 4px', borderRadius: '2px', opacity: isFilled ? 0 : 1 }}>
                                     Required
@@ -457,15 +553,17 @@ const SigningRoom: React.FC<SigningRoomProps> = ({ fileUrl, fields, onComplete, 
             </div>
 
             {/* Signature Modal */}
-            {isSignatureModalOpen && (
-                <SignatureCanvasComponent
-                    onSave={handleSignatureSave}
-                    onClose={() => setIsSignatureModalOpen(false)}
-                    title={activeField && fields.find(f => f.id === activeField)?.type === 'initials' ? 'Adopt your initials' : 'Adopt your signature'}
-                    isInitials={!!(activeField && fields.find(f => f.id === activeField)?.type === 'initials')}
-                />
-            )}
-        </div>
+            {
+                isSignatureModalOpen && (
+                    <SignatureCanvasComponent
+                        onSave={handleSignatureSave}
+                        onClose={() => setIsSignatureModalOpen(false)}
+                        title={activeField && fields.find(f => f.id === activeField)?.type === 'initials' ? 'Adopt your initials' : 'Adopt your signature'}
+                        isInitials={!!(activeField && fields.find(f => f.id === activeField)?.type === 'initials')}
+                    />
+                )
+            }
+        </div >
     );
 };
 

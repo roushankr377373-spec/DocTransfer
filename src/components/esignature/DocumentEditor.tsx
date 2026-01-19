@@ -11,11 +11,17 @@ import {
     Grid,
     Plus,
     X,
-    User
+    User,
+    Mail,
+    Building,
+    Briefcase,
+    Stamp
 } from 'lucide-react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { DndContext, useDraggable, useDroppable, DragOverlay, type DragEndEvent } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
+import StampSelector, { STAMPS } from './StampSelector';
+import type { StampType } from './StampSelector';
 
 // Set up PDF worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -97,7 +103,14 @@ const DraggableTool = ({ icon, label, color, type }: { icon: any, label: string,
 };
 
 // Canvas Field Component
-const CanvasField = ({ field, isSelected, onSelect, onDelete, onResize }: { field: any, isSelected: boolean, onSelect: () => void, onDelete: () => void, onResize: (width: number, height: number) => void }) => {
+const CanvasField = ({ field, isSelected, onSelect, onDelete, onResize, onChangeStamp }: {
+    field: any,
+    isSelected: boolean,
+    onSelect: () => void,
+    onDelete: () => void,
+    onResize: (width: number, height: number) => void,
+    onChangeStamp?: () => void
+}) => {
     const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
         id: `field-${field.id}`,
         data: { ...field, origin: 'canvas' }
@@ -154,6 +167,15 @@ const CanvasField = ({ field, isSelected, onSelect, onDelete, onResize }: { fiel
                     <div style={{ position: 'absolute', top: -40, left: '50%', transform: 'translateX(-50%)', background: '#1f2937', borderRadius: '6px', padding: '4px', display: 'flex', gap: '4px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', zIndex: 50 }}>
                         <button onClick={(e) => { e.stopPropagation(); onDelete(); }} style={{ color: '#ef4444', padding: '4px', borderRadius: '4px', border: 'none', background: 'transparent', cursor: 'pointer' }}><Trash2 size={14} /></button>
                         <button style={{ color: 'white', padding: '4px', borderRadius: '4px', border: 'none', background: 'transparent', cursor: 'pointer' }}><Settings size={14} /></button>
+                        {field.type === 'stamp' && (
+                            <button
+                                onClick={(e) => { e.stopPropagation(); onChangeStamp && onChangeStamp(); }}
+                                style={{ color: 'white', padding: '4px', borderRadius: '4px', border: 'none', background: 'transparent', cursor: 'pointer' }}
+                                title="Change Stamp"
+                            >
+                                <Stamp size={14} />
+                            </button>
+                        )}
                     </div>
                     {/* Resize Handle */}
                     <div
@@ -176,8 +198,8 @@ const CanvasField = ({ field, isSelected, onSelect, onDelete, onResize }: { fiel
             )}
             <div style={{
                 padding: '0',
-                background: isSelected ? '#e0e7ff' : '#eff6ff',
-                border: isSelected ? '2px solid #4f46e5' : '2px solid #6366f1',
+                background: field.type === 'stamp' ? 'transparent' : (isSelected ? '#e0e7ff' : '#eff6ff'),
+                border: isSelected ? '2px solid #4f46e5' : (field.type === 'stamp' ? 'none' : '2px solid #6366f1'),
                 borderRadius: '4px',
                 cursor: 'move',
                 boxShadow: isSelected ? '0 0 0 2px rgba(99, 102, 241, 0.2)' : 'none',
@@ -189,14 +211,28 @@ const CanvasField = ({ field, isSelected, onSelect, onDelete, onResize }: { fiel
                 userSelect: 'none',
                 overflow: 'hidden'
             }}>
-                <span style={{ fontSize: field.type === 'signature' ? '14px' : '12px', fontWeight: '600', color: '#4f46e5', pointerEvents: 'none', whiteSpace: 'nowrap' }}>{field.type}</span>
+                {field.type === 'stamp' && field.stampType && STAMPS[field.stampType as StampType] ? (
+                    <div style={{ width: '100%', height: '100%', pointerEvents: 'none' }}>
+                        {STAMPS[field.stampType as StampType].component}
+                    </div>
+                ) : (
+                    <span style={{ fontSize: field.type === 'signature' ? '14px' : '12px', fontWeight: '600', color: '#4f46e5', pointerEvents: 'none', whiteSpace: 'nowrap' }}>{field.type}</span>
+                )}
             </div>
         </div>
     );
 };
 
 // Droppable Canvas Component
-const PDFCanvas = ({ fileUrl, fields, selectedFieldId, onSelectField, onDeleteField, onResizeField }: { fileUrl: string, fields: any[], selectedFieldId: string | null, onSelectField: (id: string | null) => void, onDeleteField: (id: string) => void, onResizeField: (id: string, width: number, height: number) => void }) => {
+const PDFCanvas = ({ fileUrl, fields, selectedFieldId, onSelectField, onDeleteField, onResizeField, onChangeStamp }: {
+    fileUrl: string,
+    fields: any[],
+    selectedFieldId: string | null,
+    onSelectField: (id: string | null) => void,
+    onDeleteField: (id: string) => void,
+    onResizeField: (id: string, width: number, height: number) => void,
+    onChangeStamp: (id: string) => void
+}) => {
     const { setNodeRef } = useDroppable({
         id: 'pdf-canvas',
     });
@@ -239,6 +275,7 @@ const PDFCanvas = ({ fileUrl, fields, selectedFieldId, onSelectField, onDeleteFi
                     onSelect={() => onSelectField(field.id)}
                     onDelete={() => onDeleteField(field.id)}
                     onResize={(width, height) => onResizeField(field.id, width, height)}
+                    onChangeStamp={() => onChangeStamp(field.id)}
                 />
             ))}
         </div>
@@ -255,6 +292,10 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ fileUrl, onSave, onCanc
     const [isSignerModalOpen, setIsSignerModalOpen] = useState(false);
     const [newSignerName, setNewSignerName] = useState('');
     const [newSignerEmail, setNewSignerEmail] = useState('');
+
+    // Stamp State
+    const [isStampSelectorOpen, setIsStampSelectorOpen] = useState(false);
+    const [editingStampFieldId, setEditingStampFieldId] = useState<string | null>(null);
 
     const handleAddSigner = () => {
         if (newSignerName && newSignerEmail) {
@@ -331,6 +372,22 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ fileUrl, onSave, onCanc
                     width = 120;
                     height = 40;
                     break;
+                case 'email':
+                    width = 200;
+                    height = 40;
+                    break;
+                case 'company':
+                    width = 200;
+                    height = 40;
+                    break;
+                case 'title':
+                    width = 200;
+                    height = 40;
+                    break;
+                case 'stamp':
+                    width = 100;
+                    height = 100;
+                    break;
             }
 
             const newField = {
@@ -339,10 +396,16 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ fileUrl, onSave, onCanc
                 x: newX,
                 y: newY,
                 width,
-                height
+                height,
+                ...(type === 'stamp' ? { stampType: 'biohazard' } : {})
             };
             setFields([...fields, newField]);
             setSelectedFieldId(newField.id);
+
+            if (type === 'stamp') {
+                setEditingStampFieldId(newField.id);
+                setIsStampSelectorOpen(true);
+            }
         } else if (active.data.current?.origin === 'canvas') {
             // Moving existing item
             // For existing items, delta is relative to start.
@@ -359,6 +422,26 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ fileUrl, onSave, onCanc
                 }
                 return f;
             }));
+        }
+    };
+
+    const handleStampSelect = (stampType: StampType) => {
+        if (editingStampFieldId) {
+            setFields(fields.map(f => {
+                if (f.id === editingStampFieldId) {
+                    const stampInfo = STAMPS[stampType];
+                    return {
+                        ...f,
+                        stampType,
+                        // Optionally update size to match stamp aspect ratio or defaults
+                        width: stampInfo.width,
+                        height: stampInfo.height
+                    };
+                }
+                return f;
+            }));
+            setIsStampSelectorOpen(false);
+            setEditingStampFieldId(null);
         }
     };
 
@@ -409,26 +492,37 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ fileUrl, onSave, onCanc
                                 gap: '0.5rem',
                                 background: 'white',
                                 border: '1px solid #e5e7eb',
-                                padding: '0.5rem 1rem',
-                                borderRadius: '10px',
+                                padding: '0.6rem 1.25rem',
+                                borderRadius: '12px',
                                 cursor: 'pointer',
-                                color: '#4b5563',
+                                color: '#374151',
                                 fontSize: '0.9rem',
-                                fontWeight: '500',
-                                transition: 'all 0.2s'
+                                fontWeight: '600',
+                                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                                transform: 'translateY(0)'
                             }}
-                            className="hover:bg-gray-50 hover:border-gray-300"
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.borderColor = '#d1d5db';
+                                e.currentTarget.style.background = '#f9fafb';
+                                e.currentTarget.style.transform = 'translateY(-1px)';
+                                e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.borderColor = '#e5e7eb';
+                                e.currentTarget.style.background = 'white';
+                                e.currentTarget.style.transform = 'translateY(0)';
+                                e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
+                            }}
                         >
-                            <ArrowLeft size={16} /> Back
+                            <ArrowLeft size={18} /> Back
                         </button>
                         <div style={{ width: '1px', height: '24px', background: '#d1d5db' }} />
                         <h2 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#111827', margin: 0, letterSpacing: '-0.025em' }}>Prepare Document</h2>
                     </div>
 
                     <div style={{ display: 'flex', gap: '0.75rem' }}>
-                        <button style={{ padding: '0.6rem 1.25rem', background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', color: '#374151', fontWeight: '600', fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', boxShadow: '0 2px 5px -1px rgba(0,0,0,0.05)' }}>
-                            <Eye size={18} /> Preview
-                        </button>
+
                         <button
                             onClick={() => onSave(fields)}
                             style={{
@@ -479,6 +573,10 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ fileUrl, onSave, onCanc
                                 <DraggableTool icon={<Calendar size={18} />} label="Date Signed" color="#059669" type="date" />
                                 <DraggableTool icon={<Type size={18} />} label="Text Box" color="#f59e0b" type="text" />
                                 <DraggableTool icon={<CheckSquare size={18} />} label="Checkbox" color="#ef4444" type="checkbox" />
+                                <DraggableTool icon={<Mail size={18} />} label="Email" color="#0ea5e9" type="email" />
+                                <DraggableTool icon={<Building size={18} />} label="Company" color="#64748b" type="company" />
+                                <DraggableTool icon={<Briefcase size={18} />} label="Job Title" color="#8b5cf6" type="title" />
+                                <DraggableTool icon={<Stamp size={18} />} label="Stamp" color="#e11d48" type="stamp" />
                             </div>
                         </div>
 
@@ -556,6 +654,10 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ fileUrl, onSave, onCanc
                                 onResizeField={(id, width, height) => {
                                     setFields(fields.map(f => f.id === id ? { ...f, width, height } : f));
                                 }}
+                                onChangeStamp={(id) => {
+                                    setEditingStampFieldId(id);
+                                    setIsStampSelectorOpen(true);
+                                }}
                             />
                         </div>
                     </div>
@@ -628,6 +730,18 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ fileUrl, onSave, onCanc
                         </div>
                     </div>
                 )}
+
+                {/* Stamp Selector Modal */}
+                <StampSelector
+                    isOpen={isStampSelectorOpen}
+                    onClose={() => {
+                        setIsStampSelectorOpen(false);
+                        // If we were adding a new stamp and cancelled, maybe remove it? 
+                        // For now, keep it with default.
+                        setEditingStampFieldId(null);
+                    }}
+                    onSelect={handleStampSelect}
+                />
             </div>
         </DndContext >
     );
