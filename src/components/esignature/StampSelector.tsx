@@ -1,7 +1,7 @@
 import React from 'react';
 import { X } from 'lucide-react';
 
-export type StampType = 'biohazard' | 'auth-square' | 'saito' | 'auth-simple' | 'authorized';
+export type StampType = 'biohazard' | 'auth-square' | 'saito' | 'auth-simple' | 'authorized' | 'approved-green' | 'confidential-red' | 'received-blue' | 'urgent-red' | 'paid-red' | 'draft-grey' | 'rejected-red' | 'copy-grey' | 'void-black' | 'completed-green';
 
 interface StampSelectorProps {
     isOpen: boolean;
@@ -10,6 +10,194 @@ interface StampSelectorProps {
 }
 
 export const STAMPS: Record<StampType, { label: string, component: React.ReactNode, width: number, height: number, svgString: string }> = {
+    'approved-green': {
+        label: 'Approved (Green)',
+        width: 150,
+        height: 60,
+        component: (
+            <svg viewBox="0 0 150 60" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }}>
+                <rect x="4" y="4" width="142" height="52" rx="4" stroke="#059669" strokeWidth="3" fill="none" />
+                <rect x="9" y="9" width="132" height="42" rx="2" stroke="#059669" strokeWidth="1" fill="none" />
+                <text x="75" y="38" textAnchor="middle" fill="#059669" fontSize="22" fontWeight="bold" fontFamily="sans-serif" letterSpacing="1">APPROVED</text>
+            </svg>
+        ),
+        svgString: `<svg viewBox="0 0 150 60" fill="none" xmlns="http://www.w3.org/2000/svg" width="150" height="60">
+            <rect x="4" y="4" width="142" height="52" rx="4" stroke="#059669" stroke-width="3" fill="none" />
+            <rect x="9" y="9" width="132" height="42" rx="2" stroke="#059669" stroke-width="1" fill="none" />
+            <text x="75" y="38" text-anchor="middle" fill="#059669" font-size="22" font-weight="bold" font-family="sans-serif" letter-spacing="1">APPROVED</text>
+        </svg>`
+    },
+    'confidential-red': {
+        label: 'Confidential (Red)',
+        width: 160,
+        height: 50,
+        component: (
+            <svg viewBox="0 0 160 50" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }}>
+                <defs>
+                    <filter id="grunge-conf">
+                        <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" result="noise" />
+                        <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.5" />
+                    </filter>
+                </defs>
+                <g filter="url(#grunge-conf)">
+                    <rect x="2" y="2" width="156" height="46" stroke="#DC2626" strokeWidth="3" fill="none" />
+                    <text x="80" y="34" textAnchor="middle" fill="#DC2626" fontSize="20" fontWeight="900" fontFamily="Arial Black, sans-serif" letterSpacing="1">CONFIDENTIAL</text>
+                </g>
+            </svg>
+        ),
+        svgString: `<svg viewBox="0 0 160 50" fill="none" xmlns="http://www.w3.org/2000/svg" width="160" height="50">
+             <defs>
+                <filter id="grunge-conf">
+                    <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" result="noise" />
+                    <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.5" />
+                </filter>
+            </defs>
+            <g filter="url(#grunge-conf)">
+                <rect x="2" y="2" width="156" height="46" stroke="#DC2626" stroke-width="3" fill="none" />
+                <text x="80" y="34" text-anchor="middle" fill="#DC2626" font-size="20" font-weight="900" font-family="Arial Black, sans-serif" letter-spacing="1">CONFIDENTIAL</text>
+            </g>
+        </svg>`
+    },
+    'received-blue': {
+        label: 'Received (Blue)',
+        width: 140,
+        height: 70,
+        component: (
+            <svg viewBox="0 0 140 70" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }}>
+                <rect x="2" y="2" width="136" height="66" rx="4" stroke="#2563EB" strokeWidth="2" fill="none" />
+                <text x="70" y="25" textAnchor="middle" fill="#2563EB" fontSize="18" fontWeight="bold" fontFamily="sans-serif">RECEIVED</text>
+                <line x1="20" y1="45" x2="120" y2="45" stroke="#2563EB" strokeWidth="1" />
+                <text x="70" y="60" textAnchor="middle" fill="#2563EB" fontSize="10" fontFamily="sans-serif">DATE: ........................</text>
+            </svg>
+        ),
+        svgString: `<svg viewBox="0 0 140 70" fill="none" xmlns="http://www.w3.org/2000/svg" width="140" height="70">
+            <rect x="2" y="2" width="136" height="66" rx="4" stroke="#2563EB" stroke-width="2" fill="none" />
+             <text x="70" y="25" text-anchor="middle" fill="#2563EB" font-size="18" font-weight="bold" font-family="sans-serif">RECEIVED</text>
+             <line x1="20" y1="45" x2="120" y2="45" stroke="#2563EB" stroke-width="1" />
+             <text x="70" y="60" text-anchor="middle" fill="#2563EB" font-size="10" font-family="sans-serif">DATE: ........................</text>
+        </svg>`
+    },
+    'urgent-red': {
+        label: 'Urgent (Red)',
+        width: 140,
+        height: 60,
+        component: (
+            <svg viewBox="0 0 140 60" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }}>
+                <ellipse cx="70" cy="30" rx="65" ry="25" stroke="#DC2626" strokeWidth="3" fill="none" />
+                <text x="70" y="38" textAnchor="middle" fill="#DC2626" fontSize="24" fontWeight="bold" fontFamily="Impact, sans-serif" letterSpacing="1" transform="rotate(-2 70 30)">URGENT</text>
+            </svg>
+        ),
+        svgString: `<svg viewBox="0 0 140 60" fill="none" xmlns="http://www.w3.org/2000/svg" width="140" height="60">
+            <ellipse cx="70" cy="30" rx="65" ry="25" stroke="#DC2626" stroke-width="3" fill="none" />
+            <text x="70" y="38" text-anchor="middle" fill="#DC2626" font-size="24" font-weight="bold" font-family="Impact, sans-serif" letter-spacing="1" transform="rotate(-2 70 30)">URGENT</text>
+        </svg>`
+    },
+    'paid-red': {
+        label: 'Paid (Red)',
+        width: 120,
+        height: 50,
+        component: (
+            <svg viewBox="0 0 120 50" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }}>
+                <rect x="2" y="2" width="116" height="46" stroke="#DC2626" strokeWidth="4" fill="none" />
+                <text x="60" y="34" textAnchor="middle" fill="#DC2626" fontSize="26" fontWeight="bold" fontFamily="sans-serif">PAID</text>
+            </svg>
+        ),
+        svgString: `<svg viewBox="0 0 120 50" fill="none" xmlns="http://www.w3.org/2000/svg" width="120" height="50">
+            <rect x="2" y="2" width="116" height="46" stroke="#DC2626" stroke-width="4" fill="none" />
+            <text x="60" y="34" text-anchor="middle" fill="#DC2626" font-size="26" font-weight="bold" font-family="sans-serif">PAID</text>
+        </svg>`
+    },
+    'draft-grey': {
+        label: 'Draft (Grey)',
+        width: 140,
+        height: 60,
+        component: (
+            <svg viewBox="0 0 140 60" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }}>
+                <text x="70" y="40" textAnchor="middle" fill="#9CA3AF" fontSize="36" fontWeight="bold" fontFamily="sans-serif" letterSpacing="4" opacity="0.6">DRAFT</text>
+            </svg>
+        ),
+        svgString: `<svg viewBox="0 0 140 60" fill="none" xmlns="http://www.w3.org/2000/svg" width="140" height="60">
+            <text x="70" y="40" text-anchor="middle" fill="#9CA3AF" font-size="36" font-weight="bold" font-family="sans-serif" letter-spacing="4" opacity="0.6">DRAFT</text>
+        </svg>`
+    },
+    'rejected-red': {
+        label: 'Rejected (Red)',
+        width: 150,
+        height: 60,
+        component: (
+            <svg viewBox="0 0 150 60" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }}>
+                <circle cx="75" cy="30" r="28" stroke="#DC2626" strokeWidth="2" fill="none" />
+                <text x="75" y="35" textAnchor="middle" fill="#DC2626" fontSize="18" fontWeight="bold" fontFamily="sans-serif" transform="rotate(-10 75 30)">REJECTED</text>
+            </svg>
+        ),
+        svgString: `<svg viewBox="0 0 150 60" fill="none" xmlns="http://www.w3.org/2000/svg" width="150" height="60">
+            <circle cx="75" cy="30" r="28" stroke="#DC2626" stroke-width="2" fill="none" />
+            <text x="75" y="35" text-anchor="middle" fill="#DC2626" font-size="18" font-weight="bold" font-family="sans-serif" transform="rotate(-10 75 30)">REJECTED</text>
+        </svg>`
+    },
+    'copy-grey': {
+        label: 'Copy (Grey)',
+        width: 120,
+        height: 50,
+        component: (
+            <svg viewBox="0 0 120 50" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }}>
+                <rect x="2" y="2" width="116" height="46" rx="4" stroke="#6B7280" strokeWidth="2" fill="none" strokeDasharray="4 2" />
+                <text x="60" y="32" textAnchor="middle" fill="#6B7280" fontSize="24" fontWeight="bold" fontFamily="sans-serif" letterSpacing="2">COPY</text>
+            </svg>
+        ),
+        svgString: `<svg viewBox="0 0 120 50" fill="none" xmlns="http://www.w3.org/2000/svg" width="120" height="50">
+            <rect x="2" y="2" width="116" height="46" rx="4" stroke="#6B7280" stroke-width="2" fill="none" stroke-dasharray="4 2"/>
+            <text x="60" y="32" text-anchor="middle" fill="#6B7280" font-size="24" font-weight="bold" font-family="sans-serif" letter-spacing="2">COPY</text>
+        </svg>`
+    },
+    'void-black': {
+        label: 'Void (Black)',
+        width: 140,
+        height: 60,
+        component: (
+            <svg viewBox="0 0 140 60" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }}>
+                <defs>
+                    <filter id="grunge-void">
+                        <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" result="noise" />
+                        <feDisplacementMap in="SourceGraphic" in2="noise" scale="2" />
+                    </filter>
+                </defs>
+                <g filter="url(#grunge-void)">
+                    <rect x="5" y="5" width="130" height="50" stroke="black" strokeWidth="4" fill="none" />
+                    <text x="70" y="40" textAnchor="middle" fill="black" fontSize="32" fontWeight="900" fontFamily="sans-serif" letterSpacing="2">VOID</text>
+                </g>
+            </svg>
+        ),
+        svgString: `<svg viewBox="0 0 140 60" fill="none" xmlns="http://www.w3.org/2000/svg" width="140" height="60">
+             <defs>
+                <filter id="grunge-void">
+                    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" result="noise" />
+                    <feDisplacementMap in="SourceGraphic" in2="noise" scale="2" />
+                </filter>
+            </defs>
+             <g filter="url(#grunge-void)">
+                <rect x="5" y="5" width="130" height="50" stroke="black" stroke-width="4" fill="none" />
+                <text x="70" y="40" text-anchor="middle" fill="black" font-size="32" font-weight="900" font-family="sans-serif" letter-spacing="2">VOID</text>
+            </g>
+        </svg>`
+    },
+    'completed-green': {
+        label: 'Completed (Green)',
+        width: 160,
+        height: 60,
+        component: (
+            <svg viewBox="0 0 160 60" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }}>
+                <rect x="2" y="2" width="156" height="56" rx="8" stroke="#059669" strokeWidth="2" fill="none" />
+                <path d="M20 30 L30 40 L50 20" stroke="#059669" strokeWidth="3" fill="none" />
+                <text x="95" y="38" textAnchor="middle" fill="#059669" fontSize="20" fontWeight="bold" fontFamily="sans-serif">COMPLETED</text>
+            </svg>
+        ),
+        svgString: `<svg viewBox="0 0 160 60" fill="none" xmlns="http://www.w3.org/2000/svg" width="160" height="60">
+            <rect x="2" y="2" width="156" height="56" rx="8" stroke="#059669" stroke-width="2" fill="none" />
+            <path d="M20 30 L30 40 L50 20" stroke="#059669" stroke-width="3" fill="none" />
+            <text x="95" y="38" text-anchor="middle" fill="#059669" font-size="20" font-weight="bold" font-family="sans-serif">COMPLETED</text>
+        </svg>`
+    },
     'biohazard': {
         label: 'Circles',
         width: 100,

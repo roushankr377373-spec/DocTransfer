@@ -1718,6 +1718,7 @@ button {
   color: white;
   box-shadow: 0 10px 30px -5px rgba(99, 102, 241, 0.5);
   transition: all 0.4s ease;
+  animation: pulseGlow 3s ease-in-out infinite;
 }
 
 .showcase-item:hover .showcase-icon {
@@ -1745,21 +1746,21 @@ button {
   box-shadow: 0 20px 50px -10px rgba(99, 102, 241, 0.4);
 }
 
-/* Wave Animations */
+/* Wave Animations with Continuous Float */
 .wave-1 {
-  animation: showcaseWave 2s ease-out 0.2s;
+  animation: showcaseWave 2s ease-out 0.2s, floatCard 4s ease-in-out 2.2s infinite;
 }
 
 .wave-2 {
-  animation: showcaseWave 2s ease-out 0.4s;
+  animation: showcaseWave 2s ease-out 0.4s, floatCard 4.5s ease-in-out 2.4s infinite;
 }
 
 .wave-3 {
-  animation: showcaseWave 2s ease-out 0.6s;
+  animation: showcaseWave 2s ease-out 0.6s, floatCard 5s ease-in-out 2.6s infinite;
 }
 
 .wave-4 {
-  animation: showcaseWave 2s ease-out 0.8s;
+  animation: showcaseWave 2s ease-out 0.8s, floatCard 4.2s ease-in-out 2.8s infinite;
 }
 
 /* Glowing Background Elements */
@@ -1865,6 +1866,39 @@ button {
 
   50% {
     transform: translate(-50%, -50%) scale(1.15);
+  }
+}
+
+/* Floating Animation for Showcase Cards */
+@keyframes floatCard {
+
+  0%,
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+
+  25% {
+    transform: translateY(-12px) rotate(0.5deg);
+  }
+
+  50% {
+    transform: translateY(-6px) rotate(-0.5deg);
+  }
+
+  75% {
+    transform: translateY(-15px) rotate(0.3deg);
+  }
+}
+
+@keyframes pulseGlow {
+
+  0%,
+  100% {
+    box-shadow: 0 10px 30px -5px rgba(99, 102, 241, 0.5);
+  }
+
+  50% {
+    box-shadow: 0 15px 40px -5px rgba(139, 92, 246, 0.7);
   }
 }
 

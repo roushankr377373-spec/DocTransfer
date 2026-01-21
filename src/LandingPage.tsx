@@ -195,9 +195,6 @@ const LandingPage: React.FC = () => {
             <Link to="/pricing">Pricing</Link>
             <a href="#security">Security</a>
           </div>
-          <div style={{ marginRight: '1rem' }}>
-            <LanguageSelector />
-          </div>
           <SignedOut>
             <SignInButton mode="modal">
               <button
@@ -218,7 +215,33 @@ const LandingPage: React.FC = () => {
           <SignedIn>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <Link to="/dataroom">
-                <button className="btn-secondary" style={{ padding: '0.5rem 1rem' }}>Dashboard</button>
+                <button
+                  style={{
+                    padding: '0.65rem 1.25rem',
+                    background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                    border: 'none',
+                    borderRadius: '12px',
+                    color: 'white',
+                    fontWeight: 600,
+                    fontSize: '0.95rem',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 14px rgba(99, 102, 241, 0.4)',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(99, 102, 241, 0.5)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 14px rgba(99, 102, 241, 0.4)';
+                  }}
+                >
+                  Dashboard
+                </button>
               </Link>
               <UserButton afterSignOutUrl="/" />
             </div>

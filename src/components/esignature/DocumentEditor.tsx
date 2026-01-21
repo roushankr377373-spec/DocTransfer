@@ -165,10 +165,11 @@ const CanvasField = ({ field, isSelected, onSelect, onDelete, onResize, onChange
             {isSelected && (
                 <>
                     <div style={{ position: 'absolute', top: -40, left: '50%', transform: 'translateX(-50%)', background: '#1f2937', borderRadius: '6px', padding: '4px', display: 'flex', gap: '4px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', zIndex: 50 }}>
-                        <button onClick={(e) => { e.stopPropagation(); onDelete(); }} style={{ color: '#ef4444', padding: '4px', borderRadius: '4px', border: 'none', background: 'transparent', cursor: 'pointer' }}><Trash2 size={14} /></button>
-                        <button style={{ color: 'white', padding: '4px', borderRadius: '4px', border: 'none', background: 'transparent', cursor: 'pointer' }}><Settings size={14} /></button>
+                        <button onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); onDelete(); }} style={{ color: '#ef4444', padding: '4px', borderRadius: '4px', border: 'none', background: 'transparent', cursor: 'pointer' }}><Trash2 size={14} /></button>
+                        <button onPointerDown={(e) => e.stopPropagation()} style={{ color: 'white', padding: '4px', borderRadius: '4px', border: 'none', background: 'transparent', cursor: 'pointer' }}><Settings size={14} /></button>
                         {field.type === 'stamp' && (
                             <button
+                                onPointerDown={(e) => e.stopPropagation()}
                                 onClick={(e) => { e.stopPropagation(); onChangeStamp && onChangeStamp(); }}
                                 style={{ color: 'white', padding: '4px', borderRadius: '4px', border: 'none', background: 'transparent', cursor: 'pointer' }}
                                 title="Change Stamp"

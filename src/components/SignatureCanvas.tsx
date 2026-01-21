@@ -19,7 +19,7 @@ const SignatureCanvasComponent: React.FC<SignatureCanvasComponentProps> = ({
 }) => {
     const sigCanvas = useRef<SignatureCanvas>(null);
     const containerRef = useRef<HTMLDivElement>(null);
-    const [activeTab, setActiveTab] = useState<'draw' | 'type' | 'upload'>('draw');
+    const [activeTab, setActiveTab] = useState<'draw' | 'type' | 'upload' | 'seal'>('draw');
 
     // Name inputs
     const [firstName, setFirstName] = useState('');
@@ -31,6 +31,10 @@ const SignatureCanvasComponent: React.FC<SignatureCanvasComponentProps> = ({
     const [selectedColor, setSelectedColor] = useState('black');
     const [uploadedImage, setUploadedImage] = useState<string | null>(null);
     const [canvasWidth, setCanvasWidth] = useState(500);
+
+    // Seal
+    const [sealText, setSealText] = useState('');
+    const [sealLayout, setSealLayout] = useState<'vertical' | 'horizontal'>('vertical');
 
     const colors = [
         { name: 'Black', value: 'black' },
@@ -85,6 +89,13 @@ const SignatureCanvasComponent: React.FC<SignatureCanvasComponentProps> = ({
             setInitials(`${fn.charAt(0)}${ln.charAt(0)}`.toUpperCase());
         }
     }, [firstName, lastName]);
+
+    // Auto-update Seal Text
+    useEffect(() => {
+        if (lastName) {
+            setSealText(lastName.slice(0, 4)); // Usually max 4 chars for seal
+        }
+    }, [lastName]);
 
     // Handle responsive canvas sizing
     useEffect(() => {
@@ -148,6 +159,53 @@ const SignatureCanvasComponent: React.FC<SignatureCanvasComponentProps> = ({
                 return;
             }
             onSave(uploadedImage, 'uploaded');
+        } else if (activeTab === 'seal') {
+            // Render Seal
+            const canvas = document.createElement('canvas');
+            const size = 200;
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                // Clear
+                ctx.clearRect(0, 0, size, size);
+
+                // Draw Circle (Red)
+                const centerX = size / 2;
+                const centerY = size / 2;
+                const radius = size / 2 - 5; // Padding
+
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI, false);
+                ctx.lineWidth = 8;
+                ctx.strokeStyle = '#dc2626'; // Red
+                ctx.stroke();
+
+                // Draw Text
+                ctx.fillStyle = '#dc2626'; // Red
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                // Adjust font size based on length
+                const fontSize = sealText.length <= 2 ? 80 : sealText.length <= 4 ? 60 : 40;
+                ctx.font = `700 ${fontSize}px "Noto Serif JP", serif`; // Using specific serif font if available, fallback to serif
+
+                if (sealLayout === 'horizontal') {
+                    ctx.fillText(sealText, centerX, centerY);
+                } else {
+                    // Vertical Text
+                    const chars = sealText.split('');
+                    const lineHeight = fontSize;
+                    const totalHeight = chars.length * lineHeight;
+                    let startY = centerY - (totalHeight / 2) + (lineHeight / 2);
+
+                    chars.forEach((char, i) => {
+                        ctx.fillText(char, centerX, startY + (i * lineHeight));
+                    });
+                }
+
+                onSave(canvas.toDataURL('image/png'), 'typed'); // Treat as typed/image
+            }
         }
     };
 
@@ -312,6 +370,27 @@ const SignatureCanvasComponent: React.FC<SignatureCanvasComponentProps> = ({
                                     <img src={uploadedImage} alt="Uploaded" style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} />
                                     : <div style={{ color: '#9ca3af' }}>No image uploaded</div>
                             )}
+                            {activeTab === 'seal' && (
+                                <div style={{
+                                    width: '180px',
+                                    height: '180px',
+                                    border: '4px solid #dc2626',
+                                    borderRadius: '50%',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: '#dc2626',
+                                    fontWeight: '700',
+                                    fontFamily: '"Noto Serif JP", serif',
+                                    flexDirection: sealLayout === 'vertical' ? 'column' : 'row',
+                                    fontSize: sealText.length > 2 ? '2rem' : '3.5rem',
+                                    lineHeight: 1
+                                }}>
+                                    {sealText.split('').map((char, i) => (
+                                        <span key={i}>{char}</span>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
                         {/* Tabs / Footer Actions */}
@@ -351,6 +430,18 @@ const SignatureCanvasComponent: React.FC<SignatureCanvasComponentProps> = ({
                                 }}
                             >
                                 Upload signature
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('seal')}
+                                style={{
+                                    flex: 1, padding: '0.75rem', background: activeTab === 'seal' ? 'white' : 'transparent',
+                                    fontWeight: '600', color: activeTab === 'seal' ? '#111827' : '#6b7280',
+                                    border: activeTab === 'seal' ? '1px solid #e5e7eb' : 'none',
+                                    borderBottom: activeTab === 'seal' ? '2px solid #111827' : 'none',
+                                    borderRadius: '6px', cursor: 'pointer', transition: 'all 0.2s'
+                                }}
+                            >
+                                Inkan / Seal
                             </button>
                         </div>
                     </div>
@@ -395,6 +486,44 @@ const SignatureCanvasComponent: React.FC<SignatureCanvasComponentProps> = ({
                                     <UploadIcon size={16} /> Choose Image
                                     <input type="file" hidden accept="image/*" onChange={handleFileUpload} />
                                 </label>
+                            </div>
+                        )}
+                        {activeTab === 'seal' && (
+                            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                <div style={{ flex: 1 }}>
+                                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '600', color: '#374151', marginBottom: '0.25rem' }}>Seal Text</label>
+                                    <input
+                                        type="text"
+                                        value={sealText}
+                                        onChange={(e) => setSealText(e.target.value.slice(0, 6))}
+                                        placeholder="Seal Name"
+                                        style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '6px' }}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '600', color: '#374151', marginBottom: '0.25rem' }}>Layout</label>
+                                    <div style={{ display: 'flex', border: '1px solid #d1d5db', borderRadius: '6px', overflow: 'hidden' }}>
+                                        <button
+                                            onClick={() => setSealLayout('vertical')}
+                                            style={{
+                                                padding: '0.5rem 0.75rem',
+                                                background: sealLayout === 'vertical' ? '#f3f4f6' : 'white',
+                                                cursor: 'pointer',
+                                                borderRight: '1px solid #d1d5db',
+                                                fontSize: '0.875rem'
+                                            }}
+                                        >Vertical</button>
+                                        <button
+                                            onClick={() => setSealLayout('horizontal')}
+                                            style={{
+                                                padding: '0.5rem 0.75rem',
+                                                background: sealLayout === 'horizontal' ? '#f3f4f6' : 'white',
+                                                cursor: 'pointer',
+                                                fontSize: '0.875rem'
+                                            }}
+                                        >Horizontal</button>
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </div>
