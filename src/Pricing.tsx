@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { SignedIn, SignedOut, SignInButton, UserButton, useUser } from '@clerk/clerk-react';
 import Logo from './components/Logo';
 import {
@@ -10,19 +10,165 @@ import {
     Users,
     Sparkles,
     Zap,
-    HelpCircle
+    HelpCircle,
+    Loader2,
+    Lock,
+    BarChart3,
+    PenTool,
+    UploadCloud,
+    HardDrive,
+    Clock,
+    Download,
+    ShieldCheck,
+    Type,
+    LineChart,
+    History,
+    Mail,
+    MonitorOff,
+    Calendar,
+    ShieldAlert,
+    Fingerprint,
+    Layers,
+    Bomb,
+    Timer,
+    Eye,
+    EyeOff
 } from 'lucide-react';
+import { supabase } from './lib/supabase';
+
+interface RazorpayOptions {
+    key: string;
+    amount: number;
+    currency: string;
+    name: string;
+    description: string;
+    image: string;
+    order_id: string;
+    handler: (response: any) => void;
+    prefill: {
+        name: string;
+        email: string;
+        contact: string;
+    };
+    theme: {
+        color: string;
+    };
+}
+
+interface Window {
+    Razorpay: new (options: RazorpayOptions) => any;
+}
+
 
 const Pricing: React.FC = () => {
     const { user } = useUser();
-    // const [loading, setLoading] = useState<string | null>(null);
+    const navigate = useNavigate();
+    const [loading, setLoading] = useState<string | null>(null);
     // const [error, setError] = useState<string | null>(null);
 
 
     const handleSubscribe = async (planType: 'standard' | 'business') => {
-        // Stripe integration removed
-        // setError('Payment gateway is currently under maintenance. Please contact sales.');
-        console.log('Subscribe clicked for:', planType);
+        if (!user) {
+            alert('Please sign in to subscribe.');
+            return;
+        }
+
+        try {
+            setLoading(planType);
+
+            // 1. Create Order
+            // Using direct fetch to debug 400 error seen with invoke()
+            const functionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-razorpay-order`;
+            console.log('Calling Edge Function:', functionUrl, 'for User:', user.id);
+
+            const response = await fetch(functionUrl, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ planType, userId: user.id })
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                // console.error('Edge Function Failed:', response.status, errorText);
+                let errorMsg = errorText;
+                try {
+                    const errorJson = JSON.parse(errorText);
+                    errorMsg = errorJson.error || errorJson.message || errorText;
+                } catch {
+                    // Ignore JSON parse error, use raw text
+                }
+                throw new Error(`Server returned ${response.status}: ${errorMsg}`);
+            }
+
+            const orderData = await response.json();
+
+            // 2. Initialize Razorpay
+            console.log('Initializing Razorpay with Key ID:', import.meta.env.VITE_RAZORPAY_KEY_ID);
+            console.log('Order Data:', orderData);
+
+            if (!import.meta.env.VITE_RAZORPAY_KEY_ID) {
+                alert('Configuration Error: Razorpay Key ID is missing. Please restart the dev server.');
+                setLoading(null);
+                return;
+            }
+            const options: RazorpayOptions = {
+                key: import.meta.env.VITE_RAZORPAY_KEY_ID || '', // Make sure to add this prefix if using Vite env vars in frontend, or assume the user added it as RAZORPAY_KEY_ID and we need to verify how Vite exposes it. Usually VITE_ prefix is needed.
+                // Wait, the user said they added keys to .env file. Standard Razorpay keys are often RAZORPAY_KEY_ID. 
+                // But Vite only exposes VITE_ prefixed vars. I should check if I need to ask user to rename or if I can access it.
+                // For now, let's assume VITE_RAZORPAY_KEY_ID. If not, I'll need to ask user to rename it.
+                // Actually, let's try to infer or fallback.
+                amount: orderData.amount,
+                currency: orderData.currency,
+                name: "DocTransfer",
+                description: `${planType.charAt(0).toUpperCase() + planType.slice(1)} Plan Subscription`,
+                image: "https://your-logo-url.com/logo.png", // Replace with actual logo if available
+                order_id: orderData.id,
+                handler: async function (response: any) {
+                    try {
+                        // 3. Verify Payment
+                        const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-razorpay-payment', {
+                            body: {
+                                razorpay_order_id: response.razorpay_order_id,
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_signature: response.razorpay_signature,
+                                userId: user.id,
+                                planType
+                            }
+                        });
+
+                        if (verifyError) throw verifyError;
+
+                        // alert('Payment Successful! Your subscription is now active.');
+                        // specific logic to update UI or redirect
+                        navigate('/dataroom');
+
+                    } catch (err: any) {
+                        console.error('Verification Error:', err);
+                        alert(`Payment verification failed: ${err.message || JSON.stringify(err)}`);
+                    }
+                },
+                prefill: {
+                    name: user.fullName || '',
+                    email: user.primaryEmailAddress?.emailAddress || '',
+                    contact: '' // Can leave empty or ask user
+                },
+                theme: {
+                    color: "#3b82f6"
+                }
+            };
+
+            const rzp1 = new (window as any).Razorpay(options);
+            rzp1.open();
+
+        } catch (err: any) {
+            console.error('Subscription Error:', err);
+            alert(`Subscription failed: ${err.message}`);
+        } finally {
+            setLoading(null);
+        }
     };
 
     const plans = [
@@ -35,13 +181,14 @@ const Pricing: React.FC = () => {
             target: 'Individuals & personal use',
             description: 'Perfect for trying out DocTransfer',
             features: [
-                { text: 'No Watermark', included: true },
-                { text: '10 document uploads per day', included: true },
-                { text: '10 MB file size limit', included: true },
-                { text: 'Basic password protection', included: true },
-                { text: '1-day document storage', included: true },
-                { text: 'Download controls', included: true },
-                { text: 'Basic analytics', included: true }
+                { text: 'No Watermark', included: true, icon: EyeOff },
+                { text: '10 document uploads per day', included: true, icon: UploadCloud },
+                { text: '10 E-signatures daily', included: true, icon: PenTool },
+                { text: '10 MB file size limit', included: true, icon: HardDrive },
+                { text: '1-day document storage', included: true, icon: Clock },
+                { text: 'Basic analytics', included: true, icon: BarChart3 },
+                { text: 'Basic password protection', included: false, icon: Lock },
+                { text: 'Download controls', included: false, icon: Download }
             ],
             cta: 'Get Started Free',
             ctaLink: '/dataroom',
@@ -61,22 +208,24 @@ const Pricing: React.FC = () => {
             target: 'Professionals & small teams',
             description: 'Everything you need to share professionally',
             features: [
-                { text: 'Everything in Free, plus:', included: true, bold: true },
-                { text: 'Unlimited document uploads', included: true },
-                { text: '500MB file size limit', included: true },
-                { text: 'Dynamic watermarking', included: true },
-                { text: 'Advanced analytics with page tracking', included: true },
-                { text: 'Audit trails', included: true },
-                { text: 'Email verification', included: true },
-                { text: 'Screenshot protection', included: true },
-                { text: '1-year document storage', included: true },
-                { text: 'Biometric authentication', included: false },
-                { text: 'SSO integration', included: false }
+                { text: 'Everything in Free, plus:', included: true, bold: true, icon: Sparkles },
+                { text: 'Basic password protection', included: true, icon: Lock },
+                { text: 'Download controls', included: true, icon: Download },
+                { text: 'Unlimited E-signatures', included: true, icon: PenTool },
+                { text: 'Unlimited document uploads', included: true, icon: UploadCloud },
+                { text: '100MB Per File Size limit', included: true, icon: HardDrive },
+                { text: 'Dynamic watermarking', included: true, icon: Type },
+                { text: 'Advanced analytics with page tracking', included: true, icon: LineChart },
+                { text: 'Audit trails', included: true, icon: History },
+                { text: 'Email verification', included: true, icon: Mail },
+                { text: 'Screenshot protection', included: true, icon: MonitorOff },
+                { text: '1-year document storage', included: true, icon: Calendar },
+                { text: 'SSO integration', included: true, icon: ShieldCheck }
             ],
 
-            cta: 'Coming Soon',
-            ctaLink: '/dataroom',
-            isComingSoon: true,
+            cta: 'Subscribe Now',
+            ctaLink: '#',
+            isComingSoon: false,
             popular: true,
             gradient: 'linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%)',
             glowColor: 'rgba(168, 85, 247, 0.5)',
@@ -93,22 +242,23 @@ const Pricing: React.FC = () => {
             target: 'Teams & enterprises',
             description: 'Advanced features for growing organizations',
             features: [
-                { text: 'Everything in Standard, plus:', included: true, bold: true },
-                { text: 'Unlimited file size', included: true },
-                { text: 'Vault Mode (Client-Side Encryption)', included: true },
-                { text: 'Biometric authentication (Face ID, Fingerprint)', included: true },
-                { text: 'E-signature requests', included: true },
-                { text: 'Document bundles (multi-file sharing)', included: true },
-                { text: 'SSO integration', included: true },
-                { text: 'Unlimited storage', included: true },
-                { text: 'Self-Destruct Rules', included: true },
-                { text: 'Time Expiration', included: true },
-                { text: 'View Limit', included: true }
+                { text: 'Everything in Standard, plus:', included: true, bold: true, icon: Sparkles },
+                { text: 'No Watermark', included: true, icon: EyeOff },
+                { text: '200MB file size limit', included: true, icon: HardDrive },
+                { text: 'Vault Mode (Client-Side Encryption)', included: true, icon: ShieldAlert },
+                { text: 'Biometric authentication (Fingerprint)', included: true, icon: Fingerprint },
+                { text: 'Unlimited E-signatures', included: true, icon: PenTool },
+                { text: 'Document bundles (multi-file sharing)', included: true, icon: Layers },
+                { text: 'SSO integration', included: true, icon: ShieldCheck },
+                { text: 'Unlimited storage', included: true, icon: HardDrive },
+                { text: 'Self-Destruct Rules', included: true, icon: Bomb },
+                { text: 'Time Expiration', included: true, icon: Timer },
+                { text: 'View Limit', included: true, icon: Eye }
             ],
 
-            cta: 'Coming Soon',
-            ctaLink: '/dataroom',
-            isComingSoon: true,
+            cta: 'Subscribe Now',
+            ctaLink: '#',
+            isComingSoon: false,
             popular: false,
             gradient: 'linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%)',
             glowColor: 'rgba(6, 182, 212, 0.5)',
@@ -139,7 +289,7 @@ const Pricing: React.FC = () => {
                 borderBottom: '1px solid #e2e8f0'
             }}>
                 <Link to="/" style={{ textDecoration: 'none' }}>
-                    <Logo size={32} />
+                    <Logo size={40} />
                 </Link>
                 <nav style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
                     <Link to="/" style={{ color: '#64748b', textDecoration: 'none', fontWeight: 500, fontSize: '0.95rem', transition: 'color 0.2s' }} onMouseEnter={e => e.currentTarget.style.color = '#0f172a'} onMouseLeave={e => e.currentTarget.style.color = '#64748b'}>Home</Link>
@@ -265,7 +415,7 @@ const Pricing: React.FC = () => {
                         display: 'grid',
                         gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))',
                         gap: '2rem',
-                        alignItems: 'flex-start'
+                        alignItems: 'stretch'
                     }}>
                         {plans.map((plan, index) => (
                             <div
@@ -278,7 +428,9 @@ const Pricing: React.FC = () => {
                                     position: 'relative',
                                     transition: 'all 0.3s ease',
                                     boxShadow: plan.popular ? `0 20px 40px ${plan.glowColor.replace('0.5', '0.15')}` : '0 4px 20px rgba(0,0,0,0.03)',
-                                    transform: plan.popular ? 'translateY(-10px)' : 'none'
+                                    transform: plan.popular ? 'translateY(-10px)' : 'none',
+                                    display: 'flex',
+                                    flexDirection: 'column'
                                 }}
                                 onMouseEnter={e => {
                                     e.currentTarget.style.transform = plan.popular ? 'translateY(-15px)' : 'translateY(-5px)';
@@ -311,9 +463,9 @@ const Pricing: React.FC = () => {
 
                                 <div style={{ marginBottom: '2rem' }}>
                                     <div style={{
-                                        width: '64px',
-                                        height: '64px',
-                                        borderRadius: '16px',
+                                        width: '72px',
+                                        height: '72px',
+                                        borderRadius: '18px',
                                         background: `linear-gradient(135deg, ${plan.accentColor}10 0%, ${plan.accentColor}05 100%)`,
                                         display: 'flex',
                                         alignItems: 'center',
@@ -321,7 +473,7 @@ const Pricing: React.FC = () => {
                                         marginBottom: '1.5rem',
                                         border: `1px solid ${plan.accentColor}20`
                                     }}>
-                                        <plan.icon size={32} color={plan.accentColor} />
+                                        <plan.icon size={36} color={plan.accentColor} />
                                     </div>
                                     <h3 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.5rem', color: '#0f172a' }}>{plan.name}</h3>
                                     <p style={{ color: '#64748b', fontSize: '0.9rem', minHeight: '40px' }}>{plan.target}</p>
@@ -340,25 +492,38 @@ const Pricing: React.FC = () => {
                                     )}
                                 </div>
 
-                                <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 2.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                    {plan.features.map((feature, fIndex) => (
-                                        <li key={fIndex} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', opacity: feature.included ? 1 : 0.5 }}>
-                                            {feature.included ? (
-                                                <div style={{ background: '#3b82f6', borderRadius: '50%', padding: '2px', marginTop: '2px' }}>
-                                                    <Check size={12} color="white" />
+                                <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 2.5rem', display: 'flex', flexDirection: 'column', gap: '1.125rem', flex: 1 }}>
+                                    {plan.features.map((feature, fIndex) => {
+                                        const FeatureIcon = (feature as any).icon || Check;
+                                        return (
+                                            <li key={fIndex} style={{ display: 'flex', alignItems: 'center', gap: '1rem', opacity: feature.included ? 1 : 0.5, transition: 'transform 0.2s ease' }}>
+                                                <div style={{
+                                                    width: '32px',
+                                                    height: '32px',
+                                                    borderRadius: '8px',
+                                                    background: feature.included ? `${plan.accentColor}15` : '#f1f5f9',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    flexShrink: 0
+                                                }}>
+                                                    {feature.included ? (
+                                                        <FeatureIcon size={18} color={plan.accentColor} strokeWidth={(feature as any).icon ? 2.5 : 3} />
+                                                    ) : (
+                                                        <X size={18} color="#94a3b8" />
+                                                    )}
                                                 </div>
-                                            ) : (
-                                                <X size={16} color="#94a3b8" style={{ marginTop: '2px' }} />
-                                            )}
-                                            <span style={{
-                                                fontSize: '0.9rem',
-                                                color: feature.included && (feature as any).bold ? '#0f172a' : '#64748b',
-                                                fontWeight: (feature as any).bold ? 600 : 400
-                                            }}>
-                                                {feature.text}
-                                            </span>
-                                        </li>
-                                    ))}
+                                                <span style={{
+                                                    fontSize: '0.925rem',
+                                                    color: feature.included && (feature as any).bold ? '#1e293b' : '#64748b',
+                                                    fontWeight: (feature as any).bold ? 700 : 500,
+                                                    letterSpacing: '-0.01em'
+                                                }}>
+                                                    {feature.text}
+                                                </span>
+                                            </li>
+                                        );
+                                    })}
 
                                     {/* Upcoming Features */}
                                     {(plan as any).upcomingFeatures && (plan as any).upcomingFeatures.length > 0 && (
@@ -382,8 +547,8 @@ const Pricing: React.FC = () => {
 
                                 {plan.planType ? (
                                     <button
-                                        // onClick={() => handleSubscribe(plan.planType!)}
-                                        // disabled={loading === plan.planType || (plan as any).isComingSoon}
+                                        onClick={() => handleSubscribe(plan.planType!)}
+                                        disabled={loading === plan.planType}
                                         style={{
                                             width: '100%',
                                             padding: '1rem',
@@ -392,18 +557,40 @@ const Pricing: React.FC = () => {
                                             background: '#3b82f6', // Blue background
                                             color: 'white',
                                             fontWeight: 600,
-                                            // cursor: loading === plan.planType || (plan as any).isComingSoon ? 'not-allowed' : 'pointer',
-                                            cursor: 'not-allowed',
+                                            cursor: loading === plan.planType ? 'not-allowed' : 'pointer',
                                             transition: 'all 0.2s',
                                             display: 'flex',
                                             justifyContent: 'center',
                                             alignItems: 'center',
                                             gap: '0.5rem',
-                                            boxShadow: 'none' // Removed glow
+                                            boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+                                        }}
+                                        onMouseEnter={e => {
+                                            if (loading !== plan.planType) {
+                                                e.currentTarget.style.transform = 'translateY(-2px)';
+                                                e.currentTarget.style.background = '#2563eb';
+                                                e.currentTarget.style.boxShadow = '0 6px 16px rgba(59, 130, 246, 0.4)';
+                                            }
+                                        }}
+                                        onMouseLeave={e => {
+                                            if (loading !== plan.planType) {
+                                                e.currentTarget.style.transform = 'translateY(0)';
+                                                e.currentTarget.style.background = '#3b82f6';
+                                                e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)';
+                                            }
                                         }}
                                     >
-                                        Coming Soon
-                                        {/* {!loading && <Zap size={16} />} */}
+                                        {loading === plan.planType ? (
+                                            <>
+                                                <Loader2 size={20} className="animate-spin" />
+                                                Processing...
+                                            </>
+                                        ) : (
+                                            <>
+                                                Subscribe
+                                                <Zap size={16} />
+                                            </>
+                                        )}
                                     </button>
                                 ) : (
                                     <Link to={plan.ctaLink} style={{ textDecoration: 'none' }}>

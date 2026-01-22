@@ -29,6 +29,7 @@ export const useSubscription = () => {
     const [subscription, setSubscription] = useState<Subscription | null>(null);
     const [usage, setUsage] = useState<SubscriptionUsage | null>(null);
     const [dailyUploadCount, setDailyUploadCount] = useState<number>(0);
+    const [dailyESignatureCount, setDailyESignatureCount] = useState<number>(0);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
 
@@ -97,19 +98,32 @@ export const useSubscription = () => {
                     month: currentMonth
                 });
 
-                // Fetch DAILY upload count (Logic for new Free Plan limit)
+                // Fetch DAILY tracking
                 const todayStart = new Date();
                 todayStart.setHours(0, 0, 0, 0);
                 const todayISO = todayStart.toISOString();
 
-                const { count, error: countError } = await supabase
+                // 1. Daily Upload Count
+                const { count: uploadCount, error: uploadCountError } = await supabase
                     .from('documents')
                     .select('*', { count: 'exact', head: true })
                     .eq('user_id', user.id)
                     .gte('created_at', todayISO);
 
-                if (!countError) {
-                    setDailyUploadCount(count || 0);
+                if (!uploadCountError) {
+                    setDailyUploadCount(uploadCount || 0);
+                }
+
+                // 2. Daily E-Signature Count
+                const { count: esignCount, error: esignCountError } = await supabase
+                    .from('documents')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('user_id', user.id)
+                    .eq('requires_signature', true)
+                    .gte('created_at', todayISO);
+
+                if (!esignCountError) {
+                    setDailyESignatureCount(esignCount || 0);
                 }
 
                 setError(null);
@@ -184,6 +198,21 @@ export const useSubscription = () => {
     };
 
     /**
+     * Check if user can create a new e-signature request
+     */
+    const canCreateESignature = (): boolean => {
+        if (!subscription) return false;
+
+        // Paid plans (Standard/Business) have unlimited e-signatures
+        if (subscription.plan_type === 'standard' || subscription.plan_type === 'business') {
+            return true;
+        }
+
+        // Free plan: check if under 10 e-signature requests TODAY
+        return dailyESignatureCount < 10;
+    };
+
+    /**
      * Get max file size for user's plan (in bytes)
      */
     const getMaxFileSize = (): number => {
@@ -193,7 +222,7 @@ export const useSubscription = () => {
             case 'free':
                 return 10 * 1024 * 1024; // 10MB
             case 'standard':
-                return 500 * 1024 * 1024; // 500MB
+                return 100 * 1024 * 1024; // 100MB
             case 'business':
                 return Infinity; // Unlimited
             default:
@@ -206,6 +235,12 @@ export const useSubscription = () => {
      */
     const hasFeature = (feature: string): boolean => {
         if (!subscription) return false;
+
+        // Check if subscription is active and not expired
+        const isActive = subscription.status === 'active' || subscription.status === 'trialing';
+        const isNotExpired = !subscription.current_period_end || new Date(subscription.current_period_end) > new Date();
+
+        const hasActivePaidPlan = isActive && isNotExpired && (subscription.plan_type === 'standard' || subscription.plan_type === 'business');
 
         const featureMap: Record<string, string[]> = {
             'custom_branding': ['standard', 'business'],
@@ -220,16 +255,22 @@ export const useSubscription = () => {
             'priority_support': ['standard', 'business'],
             'vault_mode': ['business'],
             'biometric_auth': ['business'],
-            'e_signature': ['business'],
+            'e_signature': ['free', 'standard', 'business'],
             'document_bundles': ['business'],
             'sso_integration': ['business'],
             'white_label': ['business'],
             'dedicated_manager': ['business'],
             'custom_integrations': ['business'],
             'sla_guarantee': ['business'],
+            'password_protection': ['standard', 'business'],
+            'download_controls': ['standard', 'business'],
         };
 
-        return featureMap[feature]?.includes(subscription.plan_type) || false;
+        // Free features are always available regardless of plan status if they are in the 'free' list
+        if (featureMap[feature]?.includes('free')) return true;
+
+        // For premium features, check if user has an active paid plan
+        return hasActivePaidPlan && (featureMap[feature]?.includes(subscription.plan_type) || false);
     };
 
     /**
@@ -246,6 +287,15 @@ export const useSubscription = () => {
         if (!subscription || subscription.plan_type !== 'free') return Infinity; // Unlimited for paid plans
 
         return Math.max(0, 10 - dailyUploadCount);
+    };
+
+    /**
+     * Get remaining e-signatures for the current period
+     */
+    const getRemainingESignatures = (): number => {
+        if (!subscription || subscription.plan_type !== 'free') return Infinity;
+
+        return Math.max(0, 10 - dailyESignatureCount);
     };
 
     /**
@@ -269,19 +319,28 @@ export const useSubscription = () => {
         subscription,
         usage,
         dailyUploadCount,
+        dailyESignatureCount,
         isLoading,
         error,
         canUpload,
+        canCreateESignature,
         getMaxFileSize,
         hasFeature,
         isFeatureLocked,
         refreshSubscription,
 
         getRemainingUploads,
+        getRemainingESignatures,
         getStorageDurationDays,
-        isPaid: subscription?.plan_type !== 'free',
-        isStandard: subscription?.plan_type === 'standard',
-        isBusiness: subscription?.plan_type === 'business',
+        isPaid: (subscription?.plan_type === 'standard' || subscription?.plan_type === 'business') &&
+            (subscription.status === 'active' || subscription.status === 'trialing') &&
+            (!subscription.current_period_end || new Date(subscription.current_period_end) > new Date()),
+        isStandard: subscription?.plan_type === 'standard' &&
+            (subscription.status === 'active' || subscription.status === 'trialing') &&
+            (!subscription.current_period_end || new Date(subscription.current_period_end) > new Date()),
+        isBusiness: subscription?.plan_type === 'business' &&
+            (subscription.status === 'active' || subscription.status === 'trialing') &&
+            (!subscription.current_period_end || new Date(subscription.current_period_end) > new Date()),
     };
 };
 

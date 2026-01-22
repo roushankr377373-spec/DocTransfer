@@ -19,6 +19,8 @@ import {
 import { useDropzone } from 'react-dropzone';
 import { useUser } from '@clerk/clerk-react';
 import { supabase } from '../../lib/supabase';
+import useSubscription from '../../hooks/useSubscription';
+import UsageLimitBanner from '../UsageLimitBanner';
 import DocumentEditor from './DocumentEditor';
 import RecipientManager from './RecipientManager';
 import SigningRoom from './SigningRoom';
@@ -36,6 +38,12 @@ const ESignatureDashboard: React.FC<ESignatureDashboardProps> = () => {
         }
     `;
     const { user } = useUser();
+    const {
+        subscription,
+        dailyESignatureCount,
+        canCreateESignature,
+        isFeatureLocked
+    } = useSubscription();
     const [view, setView] = useState<'dashboard' | 'create'>('dashboard');
     const [wizardStep, setWizardStep] = useState<'upload' | 'prepare' | 'recipients' | 'signing'>('upload');
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -393,6 +401,15 @@ const ESignatureDashboard: React.FC<ESignatureDashboardProps> = () => {
                     </div>
                 </div>
 
+                {subscription?.plan_type === 'free' && (
+                    <UsageLimitBanner
+                        currentUploads={dailyESignatureCount}
+                        maxUploads={10}
+                        planType="free"
+                        type="signatures"
+                    />
+                )}
+
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     {loading ? (
                         <div style={{ padding: '3rem', textAlign: 'center', color: '#6b7280', background: 'white', borderRadius: '16px', border: '1px solid #f3f4f6' }}>Loading requests...</div>
@@ -421,9 +438,9 @@ const ESignatureDashboard: React.FC<ESignatureDashboardProps> = () => {
                             <h3 style={{ fontSize: '1.1rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>No signatures yet</h3>
                             <p style={{ marginBottom: '1.5rem' }}>Get started by creating your first document request.</p>
                             <button
-                                onClick={() => setView('create')}
+                                onClick={() => canCreateESignature() ? setView('create') : window.location.href = '/pricing'}
                                 style={{
-                                    background: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
+                                    background: !canCreateESignature() ? '#9ca3af' : 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
                                     color: 'white',
                                     border: 'none',
                                     padding: '0.75rem 2rem',
@@ -434,20 +451,24 @@ const ESignatureDashboard: React.FC<ESignatureDashboardProps> = () => {
                                     alignItems: 'center',
                                     gap: '0.5rem',
                                     margin: '0 auto',
-                                    boxShadow: '0 4px 6px -1px rgba(79, 70, 229, 0.2), 0 2px 4px -1px rgba(79, 70, 229, 0.1)',
+                                    boxShadow: !canCreateESignature() ? 'none' : '0 4px 6px -1px rgba(79, 70, 229, 0.2), 0 2px 4px -1px rgba(79, 70, 229, 0.1)',
                                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                                     transform: 'translateY(0)'
                                 }}
                                 onMouseEnter={(e) => {
-                                    e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)';
-                                    e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(79, 70, 229, 0.3), 0 4px 6px -2px rgba(79, 70, 229, 0.1)';
+                                    if (canCreateESignature()) {
+                                        e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)';
+                                        e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(79, 70, 229, 0.3), 0 4px 6px -2px rgba(79, 70, 229, 0.1)';
+                                    }
                                 }}
                                 onMouseLeave={(e) => {
-                                    e.currentTarget.style.transform = 'translateY(0) scale(1)';
-                                    e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(79, 70, 229, 0.2), 0 2px 4px -1px rgba(79, 70, 229, 0.1)';
+                                    if (canCreateESignature()) {
+                                        e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                                        e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(79, 70, 229, 0.2), 0 2px 4px -1px rgba(79, 70, 229, 0.1)';
+                                    }
                                 }}
                             >
-                                <Plus size={18} /> Create Request
+                                <Plus size={18} /> {!canCreateESignature() ? 'Limit Reached - Upgrade' : 'Create Request'}
                             </button>
                         </div>
                     ) : (
@@ -573,7 +594,7 @@ const ESignatureDashboard: React.FC<ESignatureDashboardProps> = () => {
 
             {/* Floating Action Button (FAB) */}
             <button
-                onClick={() => setView('create')}
+                onClick={() => canCreateESignature() ? setView('create') : window.location.href = '/pricing'}
                 style={{
                     position: 'fixed',
                     bottom: '40px',
@@ -581,10 +602,10 @@ const ESignatureDashboard: React.FC<ESignatureDashboardProps> = () => {
                     width: '64px',
                     height: '64px',
                     borderRadius: '24px',
-                    background: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
+                    background: !canCreateESignature() ? '#9ca3af' : 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
                     border: 'none',
                     color: 'white',
-                    boxShadow: '0 20px 25px -5px rgba(79, 70, 229, 0.4), 0 10px 10px -5px rgba(79, 70, 229, 0.2)',
+                    boxShadow: !canCreateESignature() ? 'none' : '0 20px 25px -5px rgba(79, 70, 229, 0.4), 0 10px 10px -5px rgba(79, 70, 229, 0.2)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -593,12 +614,16 @@ const ESignatureDashboard: React.FC<ESignatureDashboardProps> = () => {
                     transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
                 }}
                 onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'scale(1.1) rotate(5deg)';
-                    e.currentTarget.style.boxShadow = '0 25px 30px -5px rgba(79, 70, 229, 0.5), 0 15px 15px -5px rgba(79, 70, 229, 0.3)';
+                    if (canCreateESignature()) {
+                        e.currentTarget.style.transform = 'scale(1.1) rotate(5deg)';
+                        e.currentTarget.style.boxShadow = '0 25px 30px -5px rgba(79, 70, 229, 0.5), 0 15px 15px -5px rgba(79, 70, 229, 0.3)';
+                    }
                 }}
                 onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'scale(1) rotate(0deg)';
-                    e.currentTarget.style.boxShadow = '0 20px 25px -5px rgba(79, 70, 229, 0.4), 0 10px 10px -5px rgba(79, 70, 229, 0.2)';
+                    if (canCreateESignature()) {
+                        e.currentTarget.style.transform = 'scale(1) rotate(0deg)';
+                        e.currentTarget.style.boxShadow = '0 20px 25px -5px rgba(79, 70, 229, 0.4), 0 10px 10px -5px rgba(79, 70, 229, 0.2)';
+                    }
                 }}
             >
                 <Plus size={32} strokeWidth={2.5} />

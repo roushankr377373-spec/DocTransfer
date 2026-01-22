@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { Check, Sparkles, ArrowRight, Loader2 } from 'lucide-react';
 import { useUser } from '@clerk/clerk-react';
 import { createClient } from '@supabase/supabase-js';
@@ -14,6 +14,8 @@ const PaymentSuccess: React.FC = () => {
     const { user } = useUser();
     const [isVerified, setIsVerified] = useState(false);
     const [verifying, setVerifying] = useState(true);
+    const [redirectCountdown, setRedirectCountdown] = useState<number | null>(null);
+    const navigate = useNavigate();
 
     useEffect(() => {
         const checkSubscription = async () => {
@@ -57,6 +59,22 @@ const PaymentSuccess: React.FC = () => {
             setVerifying(false);
         }
     }, [sessionId, user]);
+
+    // Automatic redirection effect
+    useEffect(() => {
+        if (isVerified) {
+            setRedirectCountdown(3);
+            const timer = setInterval(() => {
+                setRedirectCountdown(prev => {
+                    if (prev && prev > 1) return prev - 1;
+                    clearInterval(timer);
+                    navigate('/dataroom');
+                    return 0;
+                });
+            }, 1000);
+            return () => clearInterval(timer);
+        }
+    }, [isVerified, navigate]);
 
     return (
         <div style={{
@@ -121,6 +139,11 @@ const PaymentSuccess: React.FC = () => {
                     ) : isVerified ? (
                         <>
                             Your subscription has been activated successfully. You now have access to all premium features!
+                            {redirectCountdown !== null && (
+                                <div style={{ marginTop: '1rem', color: '#10b981', fontWeight: '600' }}>
+                                    Redirecting to dashboard in {redirectCountdown}s...
+                                </div>
+                            )}
                         </>
                     ) : (
                         <>

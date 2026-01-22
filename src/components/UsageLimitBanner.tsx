@@ -6,12 +6,14 @@ interface UsageLimitBannerProps {
     currentUploads: number;
     maxUploads: number;
     planType: 'free' | 'standard' | 'business';
+    type?: 'uploads' | 'signatures';
 }
 
 const UsageLimitBanner: React.FC<UsageLimitBannerProps> = ({
     currentUploads,
     maxUploads,
-    planType
+    planType,
+    type = 'uploads'
 }) => {
     // Only show for free plan
     if (planType !== 'free') return null;
@@ -49,6 +51,9 @@ const UsageLimitBanner: React.FC<UsageLimitBannerProps> = ({
 
     const colors = getColors();
 
+    const unit = type === 'signatures' ? 'signature' : 'upload';
+    const unitPlural = type === 'signatures' ? 'signatures' : 'uploads';
+
     return (
         <div style={{
             background: colors.bg,
@@ -77,7 +82,7 @@ const UsageLimitBanner: React.FC<UsageLimitBannerProps> = ({
                             margin: 0,
                             marginBottom: '0.125rem'
                         }}>
-                            {isAtLimit ? 'Upload Limit Reached' : `${remaining} upload${remaining !== 1 ? 's' : ''} remaining ${isDaily ? 'today' : 'this month'}`}
+                            {isAtLimit ? `${type === 'signatures' ? 'E-Signature' : 'Upload'} Limit Reached` : `${remaining} ${remaining !== 1 ? unitPlural : unit} remaining ${isDaily ? 'today' : 'this month'}`}
                         </h4>
                         <p style={{
                             fontSize: '0.75rem',
@@ -86,8 +91,8 @@ const UsageLimitBanner: React.FC<UsageLimitBannerProps> = ({
                             margin: 0
                         }}>
                             {isAtLimit
-                                ? `You've reached your ${isDaily ? 'daily' : 'monthly'} upload limit. Upgrade for unlimited uploads.`
-                                : `Using ${currentUploads} of ${maxUploads} ${isDaily ? 'daily' : 'monthly'} uploads`
+                                ? `You've reached your ${isDaily ? 'daily' : 'monthly'} ${unit} limit. Upgrade for unlimited ${unitPlural}.`
+                                : `Using ${currentUploads} of ${maxUploads} ${isDaily ? 'daily' : 'monthly'} ${unitPlural}`
                             }
                         </p>
                     </div>
