@@ -62,9 +62,13 @@ serve(async (req) => {
             throw new Error('Invalid signature');
         }
 
-    } catch (error) {
+    } catch (error: any) {
+        console.error('Error in verify-razorpay-payment:', error);
         return new Response(
-            JSON.stringify({ error: error.message }),
+            JSON.stringify({
+                error: error.message || 'Verification failed',
+                details: error
+            }),
             {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },
                 status: 400,

@@ -92,15 +92,14 @@ const Pricing: React.FC = () => {
 
             if (!response.ok) {
                 const errorText = await response.text();
-                // console.error('Edge Function Failed:', response.status, errorText);
                 let errorMsg = errorText;
                 try {
                     const errorJson = JSON.parse(errorText);
                     errorMsg = errorJson.error || errorJson.message || errorText;
                 } catch {
-                    // Ignore JSON parse error, use raw text
+                    // Use raw text if not JSON
                 }
-                throw new Error(`Server returned ${response.status}: ${errorMsg}`);
+                throw new Error(errorMsg);
             }
 
             const orderData = await response.json();
@@ -139,7 +138,10 @@ const Pricing: React.FC = () => {
                             }
                         });
 
-                        if (verifyError) throw verifyError;
+                        if (verifyError) {
+                            const errorMsg = verifyError.message || (verifyError as any).error || 'Verification failed';
+                            throw new Error(errorMsg);
+                        }
 
                         // alert('Payment Successful! Your subscription is now active.');
                         // specific logic to update UI or redirect

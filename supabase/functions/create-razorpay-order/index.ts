@@ -19,18 +19,14 @@ serve(async (req) => {
         }
 
         let amount = 0;
-        // Define prices in SMALLEST CURRENCY UNIT (paise for INR, cents for USD)
-        // Assuming USD for now based on Pricing.tsx ($19 and $29).
-        // Razorpay international payments might need specific setup or just use INR equivalent.
-        // Let's stick to the visible price.
-        // NOTE: Razorpay default currency is usually INR. Ensure your account supports USD or convert.
-        // For simplicity, I will use USD.
+        let currency = "INR";
 
-        // Switching to INR to ensure compatibility with most Razorpay accounts
+        // Convert USD prices to INR (approximate rate 1 USD = 83 INR)
+        // This ensures compatibility with most Razorpay accounts which are based in India
         if (planType === 'standard') {
-            amount = 1900; // ₹19.00
+            amount = 19 * 83 * 100; // ₹1,577.00
         } else if (planType === 'business') {
-            amount = 2900; // ₹29.00
+            amount = 29 * 83 * 100; // ₹2,407.00
         } else {
             throw new Error('Invalid plan type');
         }
@@ -54,13 +50,15 @@ serve(async (req) => {
 
         const options = {
             amount: amount,
-            currency: "USD",  // Changed to USD ($19/$29)
+            currency: currency,
             receipt: receiptId,
             notes: {
                 userId: userId,
                 planType: planType
             }
         };
+
+        console.log('Creating Razorpay order with options:', JSON.stringify(options));
 
         const order = await instance.orders.create(options);
 
@@ -73,10 +71,21 @@ serve(async (req) => {
         );
 
     } catch (error: any) {
-        console.error('Error creating order:', error);
-        const errorMessage = error.message || String(error) || 'Unknown error';
+        console.error('Error in create-razorpay-order:', error);
+
+        let errorMessage = 'An internal server error occurred';
+        if (error instanceof Error) {
+            errorMessage = error.message;
+        } else if (typeof error === 'string') {
+            errorMessage = error;
+        }
+
         return new Response(
-            JSON.stringify({ error: errorMessage, details: error }),
+            JSON.stringify({
+                error: errorMessage,
+                stack: error.stack,
+                details: error
+            }),
             {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },
                 status: 400,
