@@ -262,8 +262,8 @@ export const useSubscription = () => {
             'dedicated_manager': ['business'],
             'custom_integrations': ['business'],
             'sla_guarantee': ['business'],
-            'password_protection': ['standard', 'business'],
-            'download_controls': ['standard', 'business'],
+            'password_protection': ['free', 'standard', 'business'],
+            'download_controls': ['free', 'standard', 'business'],
         };
 
         // Free features are always available regardless of plan status if they are in the 'free' list

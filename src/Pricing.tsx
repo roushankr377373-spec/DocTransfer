@@ -179,8 +179,8 @@ const Pricing: React.FC = () => {
                 { text: '10 MB file size limit', included: true, icon: HardDrive },
                 { text: '1-day document storage', included: true, icon: Clock },
                 { text: 'Basic analytics', included: true, icon: BarChart3 },
-                { text: 'Basic password protection', included: false, icon: Lock },
-                { text: 'Download controls', included: false, icon: Download }
+                { text: 'Basic password protection', included: true, icon: Lock },
+                { text: 'Download controls', included: true, icon: Download }
             ],
             cta: 'Get Started Free',
             ctaLink: '/dataroom',
