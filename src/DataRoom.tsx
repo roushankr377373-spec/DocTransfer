@@ -93,7 +93,6 @@ const DataRoom: React.FC = () => {
     const [allowDownloads, setAllowDownloads] = useState(true);
     const [password, setPassword] = useState('');
     const [expiresAt, setExpiresAt] = useState('');
-    const [screenshotProtection, setScreenshotProtection] = useState(false);
     const [emailVerification, setEmailVerification] = useState(false);
     const [allowedEmail, setAllowedEmail] = useState('');
     const [applyWatermark, setApplyWatermark] = useState(false);
@@ -390,7 +389,6 @@ const DataRoom: React.FC = () => {
                             expirationMode === 'date' ? expiresAt : new Date(Date.now() + durationValue * (durationUnit === 'hours' ? 3600000 : durationUnit === 'days' ? 86400000 : 604800000)).toISOString()
                         ) : null,
                         custom_domain: null,
-                        screenshot_protection: screenshotProtection,
                         email_verification: emailVerification,
                         allowed_email: emailVerification ? allowedEmail : null,
                         apply_watermark: applyWatermark,
@@ -944,40 +942,6 @@ const DataRoom: React.FC = () => {
                                                 </div>
                                                 <label className="toggle-switch">
                                                     <input type="checkbox" checked={allowDownloads} onChange={(e) => setAllowDownloads(e.target.checked)} />
-                                                    <span className="toggle-slider"></span>
-                                                </label>
-                                            </div>
-                                        </div>
-
-                                        {/* Screenshot Protection */}
-                                        <div style={{ padding: '1rem', border: '1px solid #f3f4f6', borderRadius: '12px', background: screenshotProtection ? '#fef2f2' : '#ffffff', transition: 'all 0.2s' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                                    <div style={{ padding: '8px', background: '#fee2e2', borderRadius: '8px' }}>
-                                                        <Shield size={18} style={{ color: '#ef4444' }} />
-                                                    </div>
-                                                    <div>
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                            <span style={{ fontSize: '0.95rem', fontWeight: '600', color: '#374151' }}>Screenshot Protection</span>
-                                                            {isFeatureLocked?.('screenshot_protection') && <PremiumBadge size={14} />}
-                                                        </div>
-                                                        <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>Block screen capture attempts</span>
-                                                    </div>
-                                                </div>
-                                                <label className="toggle-switch">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={screenshotProtection}
-                                                        onChange={(e) => {
-                                                            if (isFeatureLocked?.('screenshot_protection')) {
-                                                                e.preventDefault();
-                                                                handleLockedFeatureClick('Screenshot Protection');
-                                                            } else {
-                                                                setScreenshotProtection(e.target.checked);
-                                                            }
-                                                        }}
-                                                        disabled={isFeatureLocked?.('screenshot_protection')}
-                                                    />
                                                     <span className="toggle-slider"></span>
                                                 </label>
                                             </div>

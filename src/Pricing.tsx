@@ -211,7 +211,6 @@ const Pricing: React.FC = () => {
                 { text: 'Advanced analytics with page tracking', included: true, icon: LineChart },
                 { text: 'Audit trails', included: true, icon: History },
                 { text: 'Email verification', included: true, icon: Mail },
-                { text: 'Screenshot protection', included: true, icon: MonitorOff },
                 { text: '1-year document storage', included: true, icon: Calendar },
                 { text: 'SSO integration', included: true, icon: ShieldCheck }
             ],
