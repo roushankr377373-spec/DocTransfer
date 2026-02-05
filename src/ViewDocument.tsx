@@ -4,11 +4,12 @@ import { useParams } from 'react-router-dom';
 import { supabase } from './lib/supabase';
 import { decryptFile } from './lib/crypto';
 import { comparePassword, rateLimiter } from './lib/security';
-import { FileText, Download, AlertCircle, Lock as LockIcon, Package, ArrowRight, ExternalLink, Flame, ShieldCheck } from 'lucide-react';
+import { FileText, Download, AlertCircle, Lock as LockIcon, Package, ArrowRight, ExternalLink, Flame, ShieldCheck, Video, Music, Image as ImageIcon, Table, Archive } from 'lucide-react';
 import { logDocumentView, logDocumentDownload, logPasswordVerification, logEmailVerification } from './lib/auditLogger';
 import WatermarkOverlay from './components/WatermarkOverlay';
 import BiometricGate from './components/BiometricGate';
 import WebcamGate from './components/WebcamGate';
+import { getPreviewType, getExtension } from './lib/fileTypes';
 
 interface DocumentData {
     id: string;
@@ -940,90 +941,177 @@ const ViewDocument: React.FC = () => {
                             )}
 
                         </div>
-                    ) : (
-                        /* Document Preview Area */
-                        /* Decorative Floating Animation */
-                        <div style={{
-                            background: '#f8fafc',
-                            padding: '4rem 2rem',
-                            display: 'flex',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            minHeight: '400px',
-                            position: 'relative',
-                            overflow: 'hidden'
-                        }}>
-                            <style>
-                                {`
-                                    @keyframes float {
-                                        0% { transform: translateY(0px) rotate(0deg); }
-                                        50% { transform: translateY(-20px) rotate(2deg); }
-                                        100% { transform: translateY(0px) rotate(0deg); }
-                                    }
-                                    @keyframes pulse-glow {
-                                        0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.2); }
-                                        70% { box-shadow: 0 0 0 20px rgba(99, 102, 241, 0); }
-                                        100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
-                                    }
-                                `}
-                            </style>
+                    ) : (() => {
+                        /* Document Preview Area - Determine preview type */
+                        const fileExt = getExtension(document.name);
+                        const previewType = getPreviewType(fileExt);
 
+                        // Get file icon based on type
+                        const getFileIconForType = () => {
+                            if (document.is_encrypted || document.is_vault_file) return <LockIcon size={48} color="#4f46e5" />;
+                            switch (previewType) {
+                                case 'video': return <Video size={48} color="#4f46e5" />;
+                                case 'audio': return <Music size={48} color="#4f46e5" />;
+                                case 'image': return <ImageIcon size={48} color="#4f46e5" />;
+                                default:
+                                    if (['xlsx', 'xls', 'csv', 'tsv', 'ods'].includes(fileExt)) return <Table size={48} color="#4f46e5" />;
+                                    if (['zip', 'kml', 'kmz'].includes(fileExt)) return <Archive size={48} color="#4f46e5" />;
+                                    return <FileText size={48} color="#4f46e5" />;
+                            }
+                        };
+
+                        // For encrypted/vault files or non-Google Drive storage, show icon
+                        const showInlinePreview = !document.is_encrypted && !document.is_vault_file &&
+                            document.storage_type !== 'google_drive' &&
+                            ['image', 'video', 'audio', 'pdf'].includes(previewType);
+
+                        return (
                             <div style={{
+                                background: '#f8fafc',
+                                padding: showInlinePreview ? '2rem' : '4rem 2rem',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                minHeight: '400px',
                                 position: 'relative',
-                                animation: 'float 6s ease-in-out infinite'
+                                overflow: 'hidden'
                             }}>
-                                {/* Glow Effect */}
-                                <div style={{
-                                    position: 'absolute',
-                                    top: '50%',
-                                    left: '50%',
-                                    transform: 'translate(-50%, -50%)',
-                                    width: '120px',
-                                    height: '120px',
-                                    background: 'rgba(99, 102, 241, 0.15)',
-                                    borderRadius: '50%',
-                                    filter: 'blur(20px)',
-                                    animation: 'pulse-glow 3s infinite'
-                                }} />
+                                <style>
+                                    {`
+                                        @keyframes float {
+                                            0% { transform: translateY(0px) rotate(0deg); }
+                                            50% { transform: translateY(-20px) rotate(2deg); }
+                                            100% { transform: translateY(0px) rotate(0deg); }
+                                        }
+                                        @keyframes pulse-glow {
+                                            0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.2); }
+                                            70% { box-shadow: 0 0 0 20px rgba(99, 102, 241, 0); }
+                                            100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+                                        }
+                                    `}
+                                </style>
 
-                                {/* Icon Container */}
-                                <div style={{
-                                    width: '100px',
-                                    height: '100px',
-                                    background: 'white',
-                                    borderRadius: '24px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-                                    position: 'relative',
-                                    zIndex: 10,
-                                    border: '1px solid #e0e7ff'
-                                }}>
-                                    {document.is_encrypted || document.is_vault_file ? (
-                                        <LockIcon size={48} color="#4f46e5" />
-                                    ) : (
-                                        <FileText size={48} color="#4f46e5" />
-                                    )}
-                                </div>
+                                {/* Inline Preview for supported types */}
+                                {showInlinePreview && previewType === 'image' && (
+                                    <div style={{ maxWidth: '100%', maxHeight: '500px', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)' }}>
+                                        <img
+                                            src={supabase.storage.from('documents').getPublicUrl(document.file_path).data.publicUrl}
+                                            alt={document.name}
+                                            style={{ maxWidth: '100%', maxHeight: '500px', objectFit: 'contain' }}
+                                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                        />
+                                    </div>
+                                )}
 
-                                {/* Floating Elements */}
-                                <div style={{
-                                    position: 'absolute',
-                                    top: -10,
-                                    right: -10,
-                                    background: '#ecfdf5',
-                                    borderRadius: '50%',
-                                    padding: '8px',
-                                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                                    animation: 'float 4s ease-in-out infinite reverse',
-                                    zIndex: 11
-                                }}>
-                                    <ShieldCheck size={16} color="#059669" />
-                                </div>
+                                {showInlinePreview && previewType === 'video' && (
+                                    <div style={{ width: '100%', maxWidth: '800px', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)' }}>
+                                        <video
+                                            controls
+                                            style={{ width: '100%', maxHeight: '500px' }}
+                                            src={supabase.storage.from('documents').getPublicUrl(document.file_path).data.publicUrl}
+                                        >
+                                            Your browser does not support video playback.
+                                        </video>
+                                    </div>
+                                )}
+
+                                {showInlinePreview && previewType === 'audio' && (
+                                    <div style={{ width: '100%', maxWidth: '500px', padding: '2rem', background: 'white', borderRadius: '16px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                                            <div style={{ padding: '1rem', background: '#f3f4f6', borderRadius: '12px' }}>
+                                                <Music size={32} color="#4f46e5" />
+                                            </div>
+                                            <div>
+                                                <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827' }}>{document.name}</h3>
+                                                <p style={{ fontSize: '0.8rem', color: '#6b7280' }}>Audio File</p>
+                                            </div>
+                                        </div>
+                                        <audio
+                                            controls
+                                            style={{ width: '100%' }}
+                                            src={supabase.storage.from('documents').getPublicUrl(document.file_path).data.publicUrl}
+                                        >
+                                            Your browser does not support audio playback.
+                                        </audio>
+                                    </div>
+                                )}
+
+                                {showInlinePreview && previewType === 'pdf' && (
+                                    <div style={{ width: '100%', height: '600px', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)' }}>
+                                        <iframe
+                                            src={supabase.storage.from('documents').getPublicUrl(document.file_path).data.publicUrl}
+                                            style={{ width: '100%', height: '100%', border: 'none' }}
+                                            title={document.name}
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Icon display for non-previewable types */}
+                                {!showInlinePreview && (
+                                    <div style={{
+                                        position: 'relative',
+                                        animation: 'float 6s ease-in-out infinite'
+                                    }}>
+                                        {/* Glow Effect */}
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: '50%',
+                                            left: '50%',
+                                            transform: 'translate(-50%, -50%)',
+                                            width: '120px',
+                                            height: '120px',
+                                            background: 'rgba(99, 102, 241, 0.15)',
+                                            borderRadius: '50%',
+                                            filter: 'blur(20px)',
+                                            animation: 'pulse-glow 3s infinite'
+                                        }} />
+
+                                        {/* Icon Container */}
+                                        <div style={{
+                                            width: '100px',
+                                            height: '100px',
+                                            background: 'white',
+                                            borderRadius: '24px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                                            position: 'relative',
+                                            zIndex: 10,
+                                            border: '1px solid #e0e7ff'
+                                        }}>
+                                            {getFileIconForType()}
+                                        </div>
+
+                                        {/* Floating Elements */}
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: -10,
+                                            right: -10,
+                                            background: '#ecfdf5',
+                                            borderRadius: '50%',
+                                            padding: '8px',
+                                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                                            animation: 'float 4s ease-in-out infinite reverse',
+                                            zIndex: 11
+                                        }}>
+                                            <ShieldCheck size={16} color="#059669" />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* File type label for non-previewable */}
+                                {!showInlinePreview && (
+                                    <p style={{ marginTop: '1.5rem', fontSize: '0.875rem', color: '#6b7280', textAlign: 'center' }}>
+                                        {document.is_encrypted || document.is_vault_file
+                                            ? 'Secure encrypted file - Download to view'
+                                            : `${fileExt.toUpperCase()} file - Click download to access`}
+                                    </p>
+                                )}
                             </div>
-                        </div>
-                    )}
+                        );
+                    })()}
 
                     {document.burn_after_reading && (
                         <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#fff7ed', border: '1px solid #ffedd5', borderRadius: '12px', color: '#c2410c', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>

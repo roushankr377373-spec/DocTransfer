@@ -829,7 +829,7 @@ const DataRoom: React.FC = () => {
                                             type="file"
                                             onChange={handleFileInput}
                                             id="file-upload"
-                                            accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
+                                            accept=".pdf,.doc,.docx,.pptx,.ppt,.key,.odp,.xlsx,.xls,.csv,.tsv,.ods,.png,.jpg,.jpeg,.mp4,.mov,.avi,.webm,.ogg,.m4a,.mp3,.zip,.kml,.kmz"
                                             disabled={isUploading || getRemainingUploads() <= 0}
                                             multiple // Enable multiple selection
                                             style={{ display: 'none' }}
