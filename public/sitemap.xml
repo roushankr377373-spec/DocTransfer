@@ -20,8 +20,36 @@
   </url>
   <url>
     <loc>https://doctransfer.io/sign-up</loc>
-    <lastmod>2026-01-26</lastmod>
+    <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
+
+  <!-- Blog Index -->
+  <url>
+    <loc>https://doctransfer.io/blog</loc>
+    <lastmod>2026-03-01</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- Blog Posts -->
+  <url><loc>https://doctransfer.io/blog/docsend-alternatives</loc><priority>0.8</priority></url>
+  <url><loc>https://doctransfer.io/blog/secure-document-sharing</loc><priority>0.8</priority></url>
+  <url><loc>https://doctransfer.io/blog/end-to-end-encryption</loc><priority>0.8</priority></url>
+  <url><loc>https://doctransfer.io/blog/watermark-documents</loc><priority>0.8</priority></url>
+  <url><loc>https://doctransfer.io/blog/email-attachment-risks</loc><priority>0.8</priority></url>
+  <url><loc>https://doctransfer.io/blog/real-estate-document-sharing</loc><priority>0.8</priority></url>
+  <url><loc>https://doctransfer.io/blog/virtual-data-room-guide</loc><priority>0.8</priority></url>
+  <url><loc>https://doctransfer.io/blog/pitch-deck-sharing</loc><priority>0.8</priority></url>
+  <url><loc>https://doctransfer.io/blog/nda-signing-guide</loc><priority>0.8</priority></url>
+  <url><loc>https://doctransfer.io/blog/law-firm-document-security</loc><priority>0.8</priority></url>
+  <url><loc>https://doctransfer.io/blog/document-analytics</loc><priority>0.8</priority></url>
+  <url><loc>https://doctransfer.io/blog/free-esignature-tools</loc><priority>0.8</priority></url>
+
+  <!-- Comparison Pages -->
+  <url><loc>https://doctransfer.io/compare/docsend-alternative</loc><priority>0.9</priority></url>
+  <url><loc>https://doctransfer.io/compare/docusign-alternative</loc><priority>0.9</priority></url>
+  <url><loc>https://doctransfer.io/compare/google-drive-alternative</loc><priority>0.9</priority></url>
+  <url><loc>https://doctransfer.io/compare/dropbox-alternative</loc><priority>0.9</priority></url>
 </urlset>

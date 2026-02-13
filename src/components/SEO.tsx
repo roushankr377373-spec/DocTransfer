@@ -52,6 +52,15 @@ const SEO: React.FC<SEOProps> = ({
         const ogUrl = document.querySelector('meta[property="og:url"]');
         if (ogUrl) ogUrl.setAttribute('content', url);
 
+        // Update Canonical URL
+        let canonicalLink = document.querySelector('link[rel="canonical"]');
+        if (!canonicalLink) {
+            canonicalLink = document.createElement('link');
+            canonicalLink.setAttribute('rel', 'canonical');
+            document.head.appendChild(canonicalLink);
+        }
+        canonicalLink.setAttribute('href', url);
+
         // Update Twitter tags
         const twitterTitle = document.querySelector('meta[name="twitter:title"]');
         if (twitterTitle) twitterTitle.setAttribute('content', fullTitle);

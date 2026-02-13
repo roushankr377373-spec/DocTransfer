@@ -182,8 +182,9 @@ const LandingPage: React.FC = () => {
               )}
             </div>
 
-            <Link to="/pricing">Pricing</Link>
-            <a href="#security">Security</a>
+            <Link to="/blog" style={{ marginRight: '1.5rem', textDecoration: 'none', color: '#4b5563', fontWeight: 500 }}>Blog</Link>
+            <Link to="/pricing" style={{ marginRight: '1.5rem', textDecoration: 'none', color: '#4b5563', fontWeight: 500 }}>Pricing</Link>
+            <a href="#security" style={{ textDecoration: 'none', color: '#4b5563', fontWeight: 500 }}>Security</a>
           </div>
           <SignedOut>
             <SignInButton mode="modal">
